@@ -54,3 +54,24 @@ curl -H 'x-user-id: admin-1' -H 'x-user-roles: ADMIN' \
 npm run build
 npm test -- --runInBand
 ```
+
+nhánh tree 
+backend/
+├── src/
+│   ├── main.ts
+│   ├── app.module.ts
+│   └── roles/
+│       ├── actor.middleware.ts
+│       ├── admin.guard.ts
+│       ├── role.types.ts
+│       ├── roles.controller.ts
+│       ├── roles.module.ts
+│       ├── roles.service.ts
+│       └── roles.e2e-spec.ts
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── nest-cli.json
+├── jest.config.js
+├── .gitignore
+└── README.md
