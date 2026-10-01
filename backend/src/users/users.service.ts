@@ -1,8 +1,15 @@
-import { ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Role } from '../roles/role.types';
 import { MailService } from './mail.service';
-import { generateActivationToken, generateTemporaryPassword, hashPassword } from './password.util';
+import { generateActivationToken, generateTemporaryPassword, hashPassword, verifyPassword } from './password.util';
 import {
   CreateUserInput,
   ListUsersQuery,
@@ -11,6 +18,7 @@ import {
   UserAccount,
   UserResponse,
   UserStatus,
+  ChangePasswordInput,
 } from './user.types';
 import { normalizePhone, toSearchText } from './users.validation';
 
@@ -51,6 +59,7 @@ export class UsersService {
       mustChangePassword: true,
       activationTokenHash: tokenHash,
       activationExpiresAt: expiresAt,
+      sessionVersion: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -119,6 +128,38 @@ export class UsersService {
     return this.toResponse(user);
   }
 
+  /**
+   * Đổi mật khẩu của chính user hiện tại. sessionVersion được tăng để auth layer
+   * vô hiệu hóa token/phiên cũ sau khi tích hợp S1-01/S1-02.
+   */
+  async changePassword(userId: string, input: ChangePasswordInput): Promise<{ message: string }> {
+    const user = this.getUser(userId);
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new ForbiddenException({ code: 'ACCOUNT_NOT_ACTIVE', message: 'Tài khoản chưa hoạt động.' });
+    }
+
+    const matches = await verifyPassword(input.currentPassword, user.passwordHash);
+    if (!matches) {
+      throw new UnauthorizedException({
+        code: 'CURRENT_PASSWORD_INVALID',
+        message: 'Mật khẩu hiện tại không chính xác.',
+      });
+    }
+    if (input.currentPassword === input.newPassword) {
+      throw new ConflictException({
+        code: 'PASSWORD_UNCHANGED',
+        message: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+      });
+    }
+
+    user.passwordHash = await hashPassword(input.newPassword);
+    user.mustChangePassword = false;
+    user.sessionVersion += 1;
+    user.updatedAt = new Date();
+
+    return { message: 'Đổi mật khẩu thành công.' };
+  }
+
   private assertEmailAvailable(email: string): void {
     for (const user of this.users.values()) {
       if (user.email === email) {
@@ -165,6 +206,7 @@ export class UsersService {
       mustChangePassword: false,
       activationTokenHash: null,
       activationExpiresAt: null,
+      sessionVersion: 0,
       createdAt: now,
       updatedAt: now,
     });

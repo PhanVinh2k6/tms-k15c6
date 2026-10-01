@@ -28,6 +28,29 @@ x-user-roles: ADMIN
 | POST | `/users/:userId/roles/:role` | Gán role; không xoá các role đang có |
 | DELETE | `/users/:userId/roles/:role` | Thu hồi role |
 
+### Đổi mật khẩu của tài khoản đang đăng nhập (S1-04)
+
+```http
+PATCH /users/me/password
+Content-Type: application/json
+x-user-id: user-1
+x-user-roles: INSTRUCTOR
+```
+
+```json
+{
+  "currentPassword": "OldPass123",
+  "newPassword": "NewPass456"
+}
+```
+
+- Không nhận user ID từ request body; chỉ đổi mật khẩu của `req.actor.id`.
+- Mật khẩu hiện tại phải đúng. Mật khẩu mới dài 8–128 ký tự, có ít nhất một chữ cái và một chữ số.
+- Tài khoản phải ở trạng thái `ACTIVE`.
+- Khi thành công, `sessionVersion` tăng một đơn vị. Auth/JWT phải đưa version này vào token và so khớp với user hiện hành để token cũ không dùng được.
+
+> **Giới hạn hiện tại:** develop vẫn dùng `x-user-id` / `x-user-roles` để giả lập đăng nhập; chưa có JWT/session registry thật. Vì vậy `sessionVersion` là điểm nối cho S1-01/S1-02, chưa tự nó thu hồi được các phiên đăng nhập khác. Không triển khai cơ chế header này như xác thực production.
+
 Ví dụ:
 
 ```bash

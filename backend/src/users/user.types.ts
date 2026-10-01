@@ -20,6 +20,8 @@ export interface UserAccount {
   mustChangePassword: boolean;
   activationTokenHash: string | null;
   activationExpiresAt: Date | null;
+  /** Tăng sau khi đổi mật khẩu; auth layer phải đưa version vào token và so khớp khi xác thực. */
+  sessionVersion: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +49,11 @@ export interface UpdateUserInput {
   fullName?: string;
   email?: string;
   phone?: string | null;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface ListUsersQuery {
