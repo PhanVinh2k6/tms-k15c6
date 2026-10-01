@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { UserAccountPage } from './features/user-account/UserAccountPage'
+import { AccountLockPage } from './features/account-lock/AccountLockPage'
 
 const rootElement = document.getElementById('root')
 
@@ -10,6 +10,6 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <UserAccountPage />
+    <AccountLockPage />
   </StrictMode>,
 )
