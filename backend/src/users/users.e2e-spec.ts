@@ -162,15 +162,15 @@ describe('S1-08 user account management API', () => {
 
     it('returns 20 rows by default with paging metadata', async () => {
       const res = await http().get('/users').set(adminHeaders).expect(200);
-      // 2 tài khoản mẫu + Minh Anh + 25 học viên = 28
-      expect(res.body).toMatchObject({ page: 1, pageSize: 20, total: 28, totalPages: 2 });
+      // 3 tài khoản mẫu (admin, giảng viên, kế toán) + Minh Anh + 25 học viên = 29
+      expect(res.body).toMatchObject({ page: 1, pageSize: 20, total: 29, totalPages: 2 });
       expect(res.body.items).toHaveLength(20);
       expect(res.body.items[0].email).toBe('hv25@tms.vn'); // mới tạo xếp trước
     });
 
     it('returns the remaining rows on the next page', async () => {
       const res = await http().get('/users?page=2').set(adminHeaders).expect(200);
-      expect(res.body.items).toHaveLength(8);
+      expect(res.body.items).toHaveLength(9);
     });
 
     it('combines paging with filters', async () => {

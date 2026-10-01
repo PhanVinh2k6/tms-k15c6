@@ -1,6 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { Role } from '../roles/role.types';
-import { CreateUserInput, ListUsersQuery, LockUserInput, UpdateUserInput, UserStatus } from './user.types';
+import {
+  ChangePasswordInput,
+  CreateUserInput,
+  ListUsersQuery,
+  LockUserInput,
+  UpdateUserInput,
+  UserStatus,
+} from './user.types';
 
 type FieldErrors = Record<string, string>;
 
@@ -128,6 +135,39 @@ export function parseUpdateUser(body: unknown): UpdateUserInput {
     fail(errors);
   }
   return input;
+}
+
+export function parseChangePassword(body: unknown): ChangePasswordInput {
+  const data = asObject(body);
+  const errors: FieldErrors = {};
+
+  for (const key of Object.keys(data)) {
+    if (key !== 'currentPassword' && key !== 'newPassword') {
+      errors[key] = 'Trường này không được hỗ trợ';
+    }
+  }
+
+  const currentPassword = data.currentPassword;
+  if (typeof currentPassword !== 'string' || currentPassword.length === 0 || currentPassword.length > 128) {
+    errors.currentPassword = 'Mật khẩu hiện tại bắt buộc và tối đa 128 ký tự';
+  }
+
+  const newPassword = data.newPassword;
+  if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) {
+    errors.newPassword = 'Mật khẩu mới phải từ 8 đến 128 ký tự';
+  } else {
+    if (!/\p{L}/u.test(newPassword)) {
+      errors.newPassword = 'Mật khẩu mới phải có ít nhất một chữ cái';
+    }
+    if (!/\p{N}/u.test(newPassword)) {
+      errors.newPassword = `${errors.newPassword ? `${errors.newPassword}; ` : ''}Mật khẩu mới phải có ít nhất một chữ số`;
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    fail(errors);
+  }
+  return { currentPassword: currentPassword as string, newPassword: newPassword as string };
 }
 
 function readPositiveInt(value: unknown, fallback: number): number | undefined {
