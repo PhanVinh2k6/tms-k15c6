@@ -60,3 +60,14 @@ Component tự import CSS của nó, mọi lớp CSS bắt đầu bằng `acl-` 
 - **Lọc vai trò:** ô chọn “Vai trò” cạnh bộ lọc trạng thái, gửi `?role=`.
 - **Xoá:** nút “Xoá” → hộp thoại cảnh báo không khôi phục được → `DELETE /users/:id` (backend: nhánh `feature/S1-08-delete-account-api`). Không hiện nút xoá ở dòng của chính mình; backend cũng chặn `CANNOT_DELETE_SELF` và `CANNOT_DELETE_LAST_ADMIN`.
 - Kiểm tra dữ liệu ở `validation.ts` giống backend (họ tên 2–100 ký tự, email, số điện thoại `0xxxxxxxxx`), backend vẫn là nơi quyết định cuối cùng.
+
+## Giao diện theo Figma
+
+Bố cục, màu và chữ theo khung **"S1-08: Quản Lý Tài Khoản"** (node `176:509`) trong file Figma của nhóm:
+thanh bên tím "TMS System", bảng cột ID / Tên người dùng / Email / Vai trò / Trạng thái / Hành động,
+nút "Khóa" màu cam, "Mở khóa" màu tím, biểu tượng sửa / xóa, nút "Thêm tài khoản" chuyển màu tím → hồng, font Inter.
+
+Khác với thiết kế (giữ lại vì là chức năng S1-10 đã có):
+- Thêm ô lọc "Trạng thái" cạnh ô lọc "Vai trò".
+- Tài khoản bị khóa hiện thêm lý do và thời điểm khóa dưới nhãn "Locked"; tài khoản chưa kích hoạt hiện nhãn "Pending".
+- Cột ID hiện số thứ tự (#1, #2…), vì id thật là chuỗi dài.

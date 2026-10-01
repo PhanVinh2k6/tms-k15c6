@@ -143,7 +143,7 @@ export function UserFormDialog({ account, onSubmit, onClose }: UserFormDialogPro
 
         {editing ? (
           <p className="acl-hint">
-            Vai trò và trạng thái khoá không đổi ở đây. Vai trò đổi ở mục phân quyền (S1-09), khoá và mở khoá dùng nút trên
+            Vai trò và trạng thái khóa không đổi ở đây. Vai trò đổi ở mục phân quyền (S1-09), khóa và mở khóa dùng nút trên
             danh sách.
           </p>
         ) : (

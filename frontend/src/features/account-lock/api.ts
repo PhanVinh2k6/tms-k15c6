@@ -122,7 +122,7 @@ export function updateUser(id: string, payload: UpdateUserPayload): Promise<User
   return request<UserAccount>(`/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload) })
 }
 
-/** Xoá hẳn tài khoản (không khôi phục được). Cần backend có DELETE /users/:id. */
+/** Xóa hẳn tài khoản (không khôi phục được). Cần backend có DELETE /users/:id. */
 export function deleteUser(id: string): Promise<DeleteResult> {
   return request<DeleteResult>(`/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
