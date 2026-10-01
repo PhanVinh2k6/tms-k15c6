@@ -6,7 +6,6 @@ export enum Role {
   ACCOUNTANT = 'ACCOUNTANT',
   TA = 'TA',
   STUDENT = 'STUDENT',
-  GUEST = 'GUEST',
 }
 
 export interface User {
