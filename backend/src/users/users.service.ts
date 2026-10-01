@@ -66,7 +66,11 @@ export class UsersService {
     };
     this.users.set(user.id, user);
 
-    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+    // Ưu tiên FRONTEND_ORIGIN, vẫn nhận FRONTEND_URL (tên cũ); 5173 là cổng mặc định của frontend (Vite).
+    const frontendUrl = (process.env.FRONTEND_ORIGIN ?? process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(
+      /\/+$/,
+      '',
+    );
     try {
       await this.mailService.sendAccountActivation({
         to: user.email,
@@ -127,6 +131,29 @@ export class UsersService {
     if (input.phone !== undefined) user.phone = input.phone;
     user.updatedAt = new Date();
     return this.toResponse(user);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Vai trò (S1-09). RolesService gọi vào đây để S1-08 và S1-09 dùng chung MỘT kho dữ liệu:
+  // user tạo ở S1-08 gán được vai trò ở S1-09, và vai trò gán ở S1-09 hiện ngay trong S1-08.
+  // ---------------------------------------------------------------------------
+
+  getRoles(id: string): Role[] {
+    return [...this.getUser(id).roles].sort();
+  }
+
+  addRole(id: string, role: Role): Role[] {
+    const user = this.getUser(id);
+    user.roles.add(role);
+    user.updatedAt = new Date();
+    return this.getRoles(id);
+  }
+
+  removeRole(id: string, role: Role): Role[] {
+    const user = this.getUser(id);
+    user.roles.delete(role);
+    user.updatedAt = new Date();
+    return this.getRoles(id);
   }
 
   /**
