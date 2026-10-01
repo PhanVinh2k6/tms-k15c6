@@ -1,4 +1,14 @@
-import type { LockResult, StatusFilter, UnlockResult, UserPage } from './types'
+import type {
+  CreateUserPayload,
+  DeleteResult,
+  LockResult,
+  RoleFilter,
+  StatusFilter,
+  UnlockResult,
+  UpdateUserPayload,
+  UserAccount,
+  UserPage,
+} from './types'
 
 const API_URL = String(import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 
@@ -81,12 +91,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T
 }
 
-export type ListParams = { q: string; status: StatusFilter; page: number; pageSize: number }
+export type ListParams = { q: string; status: StatusFilter; role: RoleFilter; page: number; pageSize: number }
 
 export function listUsers(params: ListParams, signal?: AbortSignal): Promise<UserPage> {
   const query = new URLSearchParams()
   if (params.q) query.set('q', params.q)
   if (params.status) query.set('status', params.status)
+  if (params.role) query.set('role', params.role)
   query.set('page', String(params.page))
   query.set('pageSize', String(params.pageSize))
   return request<UserPage>(`/users?${query.toString()}`, { signal })
@@ -101,4 +112,17 @@ export function lockUser(id: string, reason: string): Promise<LockResult> {
 
 export function unlockUser(id: string): Promise<UnlockResult> {
   return request<UnlockResult>(`/users/${encodeURIComponent(id)}/unlock`, { method: 'POST' })
+}
+
+export function createUser(payload: CreateUserPayload): Promise<UserAccount> {
+  return request<UserAccount>('/users', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateUser(id: string, payload: UpdateUserPayload): Promise<UserAccount> {
+  return request<UserAccount>(`/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload) })
+}
+
+/** Xoá hẳn tài khoản (không khôi phục được). Cần backend có DELETE /users/:id. */
+export function deleteUser(id: string): Promise<DeleteResult> {
+  return request<DeleteResult>(`/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }

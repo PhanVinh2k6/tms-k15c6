@@ -1,7 +1,7 @@
-# Quản lý tài khoản — khoá / mở khoá (S1-10 giao diện)
+# Quản lý tài khoản — S1-08 (thêm/sửa/xoá/lọc) và S1-10 (khoá/mở khoá)
 
-Trang dành cho **Quản trị hệ thống**: tìm tài khoản, lọc theo trạng thái, khoá (bắt buộc ghi lý do) và mở khoá.
-Gọi API backend S1-08 (danh sách) và S1-10 (khoá / mở khoá), xem `claude/S1-10-api-khoa-mo-khoa.md` trong tài liệu dự án.
+Trang dành cho **Quản trị hệ thống**: tìm tài khoản, lọc theo trạng thái và vai trò, thêm và sửa tài khoản (họ tên, email, số điện thoại), khoá (bắt buộc ghi lý do), mở khoá và xoá hẳn tài khoản.
+Gọi API backend S1-08 (danh sách, tạo, sửa, xoá) và S1-10 (khoá / mở khoá), xem `claude/S1-10-api-khoa-mo-khoa.md` trong tài liệu dự án.
 
 Toàn bộ nằm trong `src/features/account-lock/`, không sửa `App.tsx` / `main.tsx` của trang đăng nhập.
 
@@ -52,3 +52,11 @@ Component tự import CSS của nó, mọi lớp CSS bắt đầu bằng `acl-` 
 - Chưa có đăng nhập thật nên chưa chặn người không phải Admin ở phía giao diện (backend vẫn trả 403).
 - Khoá xong người dùng vẫn gọi API được bằng header tạm cho tới khi Auth đọc `sessionVersion` (xem tài liệu API S1-10).
 - Chưa có form tạo / sửa tài khoản và bộ lọc vai trò (thuộc S1-08 giao diện).
+
+## S1-08 — thêm, sửa, lọc vai trò, xoá
+
+- **Thêm:** nút “Thêm tài khoản” → `UserFormDialog` (họ tên, email, số điện thoại, chọn ít nhất 1 vai trò). Gọi `POST /users`; `409 EMAIL_ALREADY_EXISTS` hiện ngay dưới ô email.
+- **Sửa:** nút “Sửa” trên mỗi dòng → cùng form, chỉ gửi trường đã đổi qua `PATCH /users/:id`. Vai trò đổi ở S1-09, khoá ở S1-10 nên không có trong form này.
+- **Lọc vai trò:** ô chọn “Vai trò” cạnh bộ lọc trạng thái, gửi `?role=`.
+- **Xoá:** nút “Xoá” → hộp thoại cảnh báo không khôi phục được → `DELETE /users/:id` (backend: nhánh `feature/S1-08-delete-account-api`). Không hiện nút xoá ở dòng của chính mình; backend cũng chặn `CANNOT_DELETE_SELF` và `CANNOT_DELETE_LAST_ADMIN`.
+- Kiểm tra dữ liệu ở `validation.ts` giống backend (họ tên 2–100 ký tự, email, số điện thoại `0xxxxxxxxx`), backend vẫn là nơi quyết định cuối cùng.

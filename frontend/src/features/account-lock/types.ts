@@ -45,6 +45,25 @@ export type UnlockResult = { user: UserAccount }
 
 export type StatusFilter = '' | UserStatus
 
+export type RoleFilter = '' | Role
+
+/** Dữ liệu form tạo tài khoản (khớp CreateUserInput của backend). */
+export type CreateUserPayload = {
+  fullName: string
+  email: string
+  phone: string | null
+  roles: Role[]
+}
+
+/** Chỉ gửi những trường thật sự đổi (backend chỉ nhận fullName, email, phone). */
+export type UpdateUserPayload = {
+  fullName?: string
+  email?: string
+  phone?: string | null
+}
+
+export type DeleteResult = { id: string }
+
 export const STATUS_LABEL: Record<UserStatus, string> = {
   ACTIVE: 'Hoạt động',
   PENDING_ACTIVATION: 'Chờ kích hoạt',
@@ -61,3 +80,6 @@ export const ROLE_LABEL: Record<Role, string> = {
   STUDENT: 'Học viên',
   GUEST: 'Khách',
 }
+
+/** Thứ tự hiển thị vai trò trong form và bộ lọc. */
+export const ROLE_ORDER: Role[] = ['ADMIN', 'TRAINING_MANAGER', 'INSTRUCTOR', 'TA', 'ADMISSIONS', 'ACCOUNTANT', 'STUDENT', 'GUEST']
