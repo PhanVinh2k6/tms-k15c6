@@ -22,7 +22,7 @@ Hệ thống Quản lý Đào tạo (TMS) là giải pháp quản lý nội bộ
 
 ## 🛠 4. Công nghệ Sử dụng (Tech Stack)
 - **Frontend:** React + TypeScript
-- **Backend:** Spring Boot (Java) / NestJS
+- **Backend:** NestJS
 - **Database:** PostgreSQL
 - **Authentication:** JWT (Access Token + Refresh Token)
 - **CI/CD & Tools:** GitHub, Jira, Docker, Slack
