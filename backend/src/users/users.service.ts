@@ -27,6 +27,7 @@ export class UsersService {
   constructor(private readonly mailService: MailService) {
     this.seed('admin-1', 'Quản trị hệ thống', 'admin@tms.local', [Role.ADMIN]);
     this.seed('user-1', 'Giảng viên mẫu', 'user@tms.local', [Role.INSTRUCTOR]);
+    this.seed('accountant-1', 'Kế toán mẫu', 'accountant@tms.local', [Role.ACCOUNTANT]);
   }
 
   async create(input: CreateUserInput): Promise<UserResponse> {
