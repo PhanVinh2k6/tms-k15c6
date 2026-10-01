@@ -148,20 +148,20 @@ describe('S1-10 khoá và mở khoá tài khoản', () => {
     });
   });
 
-  it('khoá tăng tokenVersion để thu hồi phiên cũ; mở khoá không giảm lại', async () => {
+  it('khoá tăng sessionVersion để thu hồi phiên cũ; mở khoá không giảm lại', async () => {
     // Module Auth (S1-01) đọc số này khi kiểm tra token; ở đây chỉ kiểm tra phía S1-10 có tăng đúng không.
     const store = (app.get(UsersService) as unknown as { users: Map<string, UserAccount> }).users;
     const { id } = await createUser();
-    expect(store.get(id)!.tokenVersion ?? 0).toBe(0);
+    expect(store.get(id)!.sessionVersion).toBe(0);
 
     await lock(id).expect(200);
-    expect(store.get(id)!.tokenVersion).toBe(1);
+    expect(store.get(id)!.sessionVersion).toBe(1);
 
     await unlock(id).expect(200);
-    expect(store.get(id)!.tokenVersion).toBe(1);
+    expect(store.get(id)!.sessionVersion).toBe(1);
 
     await lock(id).expect(200);
-    expect(store.get(id)!.tokenVersion).toBe(2);
+    expect(store.get(id)!.sessionVersion).toBe(2);
   });
 
   describe('cảnh báo bàn giao lớp học', () => {

@@ -31,12 +31,6 @@ export interface UserAccount {
   lockedById?: string | null;
   /** Trạng thái trước khi khoá, để mở khoá thì trả về đúng trạng thái đó. */
   statusBeforeLock?: UserStatus | null;
-  /**
-   * Số thứ tự "đời" của các phiên đăng nhập; mặc định 0. Khoá tài khoản thì tăng lên 1,
-   * module Auth ghi số này vào token nên mọi token cấp trước đó mất hiệu lực vĩnh viễn
-   * (mở khoá cũng không làm chúng sống lại).
-   */
-  tokenVersion?: number;
 }
 
 /** Dữ liệu trả về cho client — không bao giờ chứa mật khẩu hay token. */

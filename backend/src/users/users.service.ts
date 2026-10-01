@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -8,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Role } from '../roles/role.types';
-import { BadRequestException } from '@nestjs/common';
 import { MailService } from './mail.service';
 import { generateActivationToken, generateTemporaryPassword, hashPassword, verifyPassword } from './password.util';
 import {
@@ -183,9 +183,10 @@ export class UsersService {
 
   // ---------------------------------------------------------------------------
   // Khoá / mở khoá tài khoản (S1-10).
-  // Khoá = đổi status sang LOCKED + tăng tokenVersion. Module Auth chỉ cho đăng nhập khi tài khoản
-  // ACTIVE và chỉ chấp nhận token mang đúng tokenVersion hiện tại, nên khoá xong là chặn ngay cả
-  // đăng nhập lẫn phiên đang mở, và các phiên cũ không sống lại sau khi mở khoá.
+  // Khoá = đổi status sang LOCKED + tăng sessionVersion (dùng chung bộ đếm với đổi mật khẩu S1-04).
+  // Khi tích hợp Auth (S1-01/S1-02), Auth phải: chỉ cho đăng nhập khi status = ACTIVE, và chỉ chấp nhận
+  // token mang đúng sessionVersion hiện tại. Lúc đó khoá xong sẽ chặn cả đăng nhập lẫn phiên đang mở,
+  // và phiên cũ không sống lại sau khi mở khoá. Hiện chưa có Auth nên ActorMiddleware chưa chặn gì.
   // ---------------------------------------------------------------------------
 
   lock(id: string, reason: string, actorId: string): UserResponse {
@@ -206,7 +207,7 @@ export class UsersService {
     user.lockedReason = reason;
     user.lockedAt = now;
     user.lockedById = actorId;
-    user.tokenVersion = (user.tokenVersion ?? 0) + 1; // thu hồi mọi phiên đang mở
+    user.sessionVersion += 1; // thu hồi mọi phiên đang mở
     user.updatedAt = now;
     return this.toResponse(user);
   }
