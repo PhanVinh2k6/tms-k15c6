@@ -7,11 +7,7 @@ export class AdminGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     if (!request.actor?.roles.has(Role.ADMIN)) {
-      throw new ForbiddenException({
-        statusCode: 403,
-        code: 'FORBIDDEN',
-        message: 'Chỉ quản trị hệ thống mới được phép quản lý vai trò.',
-      });
+      throw new ForbiddenException('Only system administrators can manage user roles');
     }
     return true;
   }
