@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Role } from '../roles/role.types';
+import { BadRequestException } from '@nestjs/common';
 import { MailService } from './mail.service';
 import { generateActivationToken, generateTemporaryPassword, hashPassword } from './password.util';
 import {
@@ -138,6 +139,52 @@ export class UsersService {
     return user;
   }
 
+  // ---------------------------------------------------------------------------
+  // Khoá / mở khoá tài khoản (S1-10).
+  // Khoá = đổi status sang LOCKED + tăng tokenVersion. Module Auth chỉ cho đăng nhập khi tài khoản
+  // ACTIVE và chỉ chấp nhận token mang đúng tokenVersion hiện tại, nên khoá xong là chặn ngay cả
+  // đăng nhập lẫn phiên đang mở, và các phiên cũ không sống lại sau khi mở khoá.
+  // ---------------------------------------------------------------------------
+
+  lock(id: string, reason: string, actorId: string): UserResponse {
+    const user = this.getUser(id);
+    if (user.id === actorId) {
+      throw new BadRequestException({
+        code: 'CANNOT_LOCK_SELF',
+        message: 'Không thể tự khoá tài khoản của chính mình',
+      });
+    }
+    if (user.status === UserStatus.LOCKED) {
+      throw new ConflictException({ code: 'ALREADY_LOCKED', message: 'Tài khoản này đã bị khoá' });
+    }
+
+    const now = new Date();
+    user.statusBeforeLock = user.status;
+    user.status = UserStatus.LOCKED;
+    user.lockedReason = reason;
+    user.lockedAt = now;
+    user.lockedById = actorId;
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1; // thu hồi mọi phiên đang mở
+    user.updatedAt = now;
+    return this.toResponse(user);
+  }
+
+  unlock(id: string): UserResponse {
+    const user = this.getUser(id);
+    if (user.status !== UserStatus.LOCKED) {
+      throw new ConflictException({ code: 'NOT_LOCKED', message: 'Tài khoản này không bị khoá' });
+    }
+
+    // Trả về đúng trạng thái trước khi khoá: tài khoản chưa kích hoạt vẫn phải kích hoạt, không được "nhảy cóc".
+    user.status = user.statusBeforeLock ?? UserStatus.ACTIVE;
+    user.statusBeforeLock = null;
+    user.lockedReason = null;
+    user.lockedAt = null;
+    user.lockedById = null;
+    user.updatedAt = new Date();
+    return this.toResponse(user);
+  }
+
   private toResponse(user: UserAccount): UserResponse {
     return {
       id: user.id,
@@ -148,6 +195,8 @@ export class UsersService {
       status: user.status,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
+      lockedReason: user.lockedReason ?? null,
+      lockedAt: user.lockedAt ? user.lockedAt.toISOString() : null,
     };
   }
 

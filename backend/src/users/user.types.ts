@@ -22,6 +22,19 @@ export interface UserAccount {
   activationExpiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  /** S1-10: chỉ có giá trị khi status = LOCKED, mở khoá thì xoá. */
+  lockedReason?: string | null;
+  lockedAt?: Date | null;
+  /** Id của quản trị viên đã khoá. */
+  lockedById?: string | null;
+  /** Trạng thái trước khi khoá, để mở khoá thì trả về đúng trạng thái đó. */
+  statusBeforeLock?: UserStatus | null;
+  /**
+   * Số thứ tự "đời" của các phiên đăng nhập; mặc định 0. Khoá tài khoản thì tăng lên 1,
+   * module Auth ghi số này vào token nên mọi token cấp trước đó mất hiệu lực vĩnh viễn
+   * (mở khoá cũng không làm chúng sống lại).
+   */
+  tokenVersion?: number;
 }
 
 /** Dữ liệu trả về cho client — không bao giờ chứa mật khẩu hay token. */
@@ -34,6 +47,9 @@ export interface UserResponse {
   status: UserStatus;
   createdAt: string;
   updatedAt: string;
+  /** Lý do và thời điểm khoá; null khi tài khoản không bị khoá. */
+  lockedReason: string | null;
+  lockedAt: string | null;
 }
 
 export interface CreateUserInput {
@@ -63,4 +79,8 @@ export interface PaginatedResult<T> {
   pageSize: number;
   total: number;
   totalPages: number;
+}
+
+export interface LockUserInput {
+  reason: string;
 }
