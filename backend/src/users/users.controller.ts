@@ -37,9 +37,9 @@ export class UsersController {
   }
 
   /**
-   * Khoá tài khoản (S1-10). Bắt buộc có `reason`. Khoá xong người đó không đăng nhập được
-   * và phiên đang mở bị từ chối ở request kế tiếp. `handoverWarning` khác null khi người đó
-   * đang phụ trách lớp học nào đó và cần bàn giao.
+   * Khoá tài khoản (S1-10). Bắt buộc có `reason`. Khoá sẽ đổi status sang LOCKED và tăng
+   * sessionVersion; việc chặn đăng nhập / phiên đang mở do Auth (S1-01/S1-02) làm khi tích hợp.
+   * `handoverWarning` khác null khi người đó đang phụ trách lớp học nào đó và cần bàn giao.
    */
   @Post(':id/lock')
   @HttpCode(200)
