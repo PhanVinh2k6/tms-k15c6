@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -207,6 +208,53 @@ export class UsersService {
     return user;
   }
 
+  // ---------------------------------------------------------------------------
+  // Khoá / mở khoá tài khoản (S1-10).
+  // Khoá = đổi status sang LOCKED + tăng sessionVersion (dùng chung bộ đếm với đổi mật khẩu S1-04).
+  // Khi tích hợp Auth (S1-01/S1-02), Auth phải: chỉ cho đăng nhập khi status = ACTIVE, và chỉ chấp nhận
+  // token mang đúng sessionVersion hiện tại. Lúc đó khoá xong sẽ chặn cả đăng nhập lẫn phiên đang mở,
+  // và phiên cũ không sống lại sau khi mở khoá. Hiện chưa có Auth nên ActorMiddleware chưa chặn gì.
+  // ---------------------------------------------------------------------------
+
+  lock(id: string, reason: string, actorId: string): UserResponse {
+    const user = this.getUser(id);
+    if (user.id === actorId) {
+      throw new BadRequestException({
+        code: 'CANNOT_LOCK_SELF',
+        message: 'Không thể tự khoá tài khoản của chính mình',
+      });
+    }
+    if (user.status === UserStatus.LOCKED) {
+      throw new ConflictException({ code: 'ALREADY_LOCKED', message: 'Tài khoản này đã bị khoá' });
+    }
+
+    const now = new Date();
+    user.statusBeforeLock = user.status;
+    user.status = UserStatus.LOCKED;
+    user.lockedReason = reason;
+    user.lockedAt = now;
+    user.lockedById = actorId;
+    user.sessionVersion += 1; // thu hồi mọi phiên đang mở
+    user.updatedAt = now;
+    return this.toResponse(user);
+  }
+
+  unlock(id: string): UserResponse {
+    const user = this.getUser(id);
+    if (user.status !== UserStatus.LOCKED) {
+      throw new ConflictException({ code: 'NOT_LOCKED', message: 'Tài khoản này không bị khoá' });
+    }
+
+    // Trả về đúng trạng thái trước khi khoá: tài khoản chưa kích hoạt vẫn phải kích hoạt, không được "nhảy cóc".
+    user.status = user.statusBeforeLock ?? UserStatus.ACTIVE;
+    user.statusBeforeLock = null;
+    user.lockedReason = null;
+    user.lockedAt = null;
+    user.lockedById = null;
+    user.updatedAt = new Date();
+    return this.toResponse(user);
+  }
+
   private toResponse(user: UserAccount): UserResponse {
     return {
       id: user.id,
@@ -217,6 +265,8 @@ export class UsersService {
       status: user.status,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
+      lockedReason: user.lockedReason ?? null,
+      lockedAt: user.lockedAt ? user.lockedAt.toISOString() : null,
     };
   }
 
