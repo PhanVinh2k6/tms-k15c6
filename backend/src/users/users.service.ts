@@ -66,7 +66,7 @@ export class UsersService {
     };
     this.users.set(user.id, user);
 
-    // FRONTEND_ORIGIN là tên biến chung của nhóm (.env.example); 5173 là cổng mặc định của frontend (Vite).
+    // Ưu tiên FRONTEND_ORIGIN, vẫn nhận FRONTEND_URL (tên cũ); 5173 là cổng mặc định của frontend (Vite).
     const frontendUrl = (process.env.FRONTEND_ORIGIN ?? process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(
       /\/+$/,
       '',
