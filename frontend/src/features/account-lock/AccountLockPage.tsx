@@ -2,35 +2,44 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock3,
+  Funnel,
   Lock,
+  LockKeyhole,
   LockOpen,
   RefreshCw,
   Search,
+  Shield,
   ShieldAlert,
   UserX,
-  Users,
   WifiOff,
   X,
 } from 'lucide-react'
 import { ApiError, getCurrentUserId, listUsers, lockUser, unlockUser } from './api'
 import { LockDialog, UnlockDialog } from './ActionDialogs'
 import { formatDateTime } from './format'
-import { ROLE_LABEL, STATUS_LABEL } from './types'
-import type { HandoverWarning, StatusFilter, UserAccount, UserPage, UserStatus } from './types'
+import { ROLE_LABEL, ROLE_ORDER } from './types'
+import type { HandoverWarning, RoleFilter, StatusFilter, UserAccount, UserPage, UserStatus } from './types'
 import './account-lock.css'
 
 const PAGE_SIZE = 10
 const SEARCH_DEBOUNCE_MS = 350
 
-const FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: '', label: 'Tất cả' },
-  { value: 'ACTIVE', label: 'Hoạt động' },
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'ACTIVE', label: 'Đang hoạt động' },
   { value: 'PENDING_ACTIVATION', label: 'Chờ kích hoạt' },
-  { value: 'LOCKED', label: 'Đã khoá' },
+  { value: 'LOCKED', label: 'Đã khóa' },
 ]
+
+/** Nhãn trạng thái theo thiết kế Figma S1-10. */
+const STATUS_TEXT: Record<UserStatus, string> = {
+  ACTIVE: 'Đang hoạt động',
+  LOCKED: 'Đã khóa',
+  PENDING_ACTIVATION: 'Chờ kích hoạt',
+}
 
 /** Dữ liệu đã cũ so với server: báo rồi tải lại danh sách, không coi là lỗi của người dùng. */
 const STALE_CODES = new Set(['ALREADY_LOCKED', 'NOT_LOCKED', 'USER_NOT_FOUND'])
@@ -46,7 +55,7 @@ function toLoadError(error: unknown): LoadError {
       return { kind: 'denied', message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Hãy đăng nhập lại.' }
     }
     if (error.status === 403) {
-      return { kind: 'denied', message: 'Chỉ Quản trị hệ thống mới được xem và quản lý tài khoản.' }
+      return { kind: 'denied', message: 'Chỉ Quản trị hệ thống mới được xem và khóa / mở khóa tài khoản.' }
     }
     return { kind: 'other', message: error.message }
   }
@@ -54,11 +63,24 @@ function toLoadError(error: unknown): LoadError {
 }
 
 function StatusBadge({ status }: { status: UserStatus }) {
-  const Icon = status === 'LOCKED' ? Lock : status === 'ACTIVE' ? CheckCircle2 : Clock3
   return (
     <span className={`acl-badge acl-badge-${status.toLowerCase().replace('_', '-')}`}>
-      <Icon size={13} aria-hidden="true" />
-      {STATUS_LABEL[status]}
+      <i className="acl-badge-dot" aria-hidden="true" />
+      {STATUS_TEXT[status]}
+    </span>
+  )
+}
+
+/**
+ * Cột "Phiên" của thiết kế. Backend chưa có dữ liệu phiên đăng nhập (S1-02), nên chỉ hiện điều chắc chắn:
+ * khóa tài khoản thu hồi mọi phiên (sessionVersion tăng), tài khoản chưa kích hoạt thì chưa từng đăng nhập.
+ */
+function SessionInfo({ status }: { status: UserStatus }) {
+  if (status === 'LOCKED') return <span className="acl-session acl-session-none">Không có phiên</span>
+  if (status === 'PENDING_ACTIVATION') return <span className="acl-session acl-session-none">Chưa đăng nhập</span>
+  return (
+    <span className="acl-session acl-session-none" title="Chưa có dữ liệu phiên đăng nhập (cần API của S1-02)">
+      —
     </span>
   )
 }
@@ -81,7 +103,7 @@ function LockedInfo({ account }: { account: UserAccount }) {
   return (
     <span className="acl-locked-info">
       {account.lockedReason ? <>Lý do: {account.lockedReason}</> : 'Không có lý do được ghi'}
-      {account.lockedAt && <small>Khoá lúc {formatDateTime(account.lockedAt)}</small>}
+      {account.lockedAt && <small>Khóa lúc {formatDateTime(account.lockedAt)}</small>}
     </span>
   )
 }
@@ -98,12 +120,12 @@ function RowAction({ account, isSelf, onLock, onUnlock }: RowActionProps) {
     return (
       <button
         type="button"
-        className="acl-button acl-button-outline"
-        aria-label={`Mở khoá tài khoản ${account.fullName}`}
+        className="acl-button acl-button-unlock"
+        aria-label={`Mở khóa tài khoản ${account.fullName}`}
         onClick={() => onUnlock(account)}
       >
-        <LockOpen size={15} aria-hidden="true" />
-        Mở khoá
+        <LockOpen size={14} aria-hidden="true" />
+        Mở khóa
       </button>
     )
   }
@@ -111,12 +133,12 @@ function RowAction({ account, isSelf, onLock, onUnlock }: RowActionProps) {
   return (
     <button
       type="button"
-      className="acl-button acl-button-outline acl-button-outline-danger"
-      aria-label={`Khoá tài khoản ${account.fullName}`}
+      className="acl-button acl-button-lock"
+      aria-label={`Khóa tài khoản ${account.fullName}`}
       onClick={() => onLock(account)}
     >
-      <Lock size={15} aria-hidden="true" />
-      Khoá
+      <Lock size={14} aria-hidden="true" />
+      Khóa
     </button>
   )
 }
@@ -127,6 +149,7 @@ export function AccountLockPage() {
   const [searchInput, setSearchInput] = useState('')
   const [q, setQ] = useState('')
   const [status, setStatus] = useState<StatusFilter>('')
+  const [role, setRole] = useState<RoleFilter>('')
   const [page, setPage] = useState(1)
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -142,7 +165,6 @@ export function AccountLockPage() {
   const reload = useCallback(() => setReloadKey((key) => key + 1), [])
 
   // Gõ tìm kiếm: đợi người dùng ngừng gõ rồi mới gọi API và quay về trang 1.
-  // Chỉ đặt lại trang khi từ khoá thật sự đổi, để bấm "Trang sau" ngay lúc mở trang không bị kéo về trang 1.
   const appliedQuery = useRef('')
   useEffect(() => {
     const next = searchInput.trim()
@@ -159,7 +181,7 @@ export function AccountLockPage() {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(null)
-    listUsers({ q, status, page, pageSize: PAGE_SIZE }, controller.signal)
+    listUsers({ q, status, role, page, pageSize: PAGE_SIZE }, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return
         if (result.totalPages > 0 && page > result.totalPages) {
@@ -175,7 +197,7 @@ export function AccountLockPage() {
         setLoading(false)
       })
     return () => controller.abort()
-  }, [q, status, page, reloadKey])
+  }, [q, status, role, page, reloadKey])
 
   useEffect(() => {
     if (!notice) return
@@ -185,12 +207,21 @@ export function AccountLockPage() {
 
   const staleNotice = (error: ApiError, name: string): Notice => {
     if (error.code === 'ALREADY_LOCKED') {
-      return { kind: 'warning', text: `Tài khoản ${name} đã được khoá từ trước (có thể do người khác vừa khoá). Danh sách đã được tải lại.` }
+      return { kind: 'warning', text: `Tài khoản ${name} đã được khóa từ trước (có thể do người khác vừa khóa). Danh sách đã được tải lại.` }
     }
     if (error.code === 'NOT_LOCKED') {
-      return { kind: 'warning', text: `Tài khoản ${name} hiện không bị khoá (có thể do người khác vừa mở khoá). Danh sách đã được tải lại.` }
+      return { kind: 'warning', text: `Tài khoản ${name} hiện không bị khóa (có thể do người khác vừa mở khóa). Danh sách đã được tải lại.` }
     }
     return { kind: 'warning', text: `Không còn tìm thấy tài khoản ${name}. Danh sách đã được tải lại.` }
+  }
+
+  const clearFilters = () => {
+    setSearchInput('')
+    appliedQuery.current = ''
+    setQ('')
+    setStatus('')
+    setRole('')
+    setPage(1)
   }
 
   const confirmLock = async (reason: string) => {
@@ -199,7 +230,7 @@ export function AccountLockPage() {
     try {
       const result = await lockUser(target.id, reason)
       setLockTarget(null)
-      setNotice({ kind: 'success', text: `Đã khoá tài khoản ${target.fullName}.` })
+      setNotice({ kind: 'success', text: `Đã khóa tài khoản ${target.fullName}.` })
       setHandover(result.handoverWarning ? { name: target.fullName, warning: result.handoverWarning } : null)
       reload()
     } catch (error) {
@@ -219,7 +250,7 @@ export function AccountLockPage() {
     try {
       await unlockUser(target.id)
       setUnlockTarget(null)
-      setNotice({ kind: 'success', text: `Đã mở khoá tài khoản ${target.fullName}.` })
+      setNotice({ kind: 'success', text: `Đã mở khóa tài khoản ${target.fullName}.` })
       reload()
     } catch (error) {
       if (error instanceof ApiError && STALE_CODES.has(error.code)) {
@@ -233,37 +264,37 @@ export function AccountLockPage() {
   }
 
   const items = data?.items ?? []
-  const filtering = q !== '' || status !== ''
+  const filtering = q !== '' || status !== '' || role !== ''
   const firstShown = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0
   const lastShown = data ? firstShown + items.length - 1 : 0
   const tableData = !loadError && data !== null && items.length > 0 ? data : null
 
   return (
     <div className="acl-page">
-      <header className="acl-topbar">
-        <span className="acl-brand">
-          <span className="acl-brand-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
+      <aside className="acl-sidebar">
+        <div className="acl-sidebar-brand">
+          <Shield size={48} strokeWidth={1.6} aria-hidden="true" />
+          <span>TMS System</span>
+        </div>
+        <nav className="acl-sidebar-nav" aria-label="Điều hướng">
+          <span className="acl-nav-current" aria-current="page">
+            <LockKeyhole size={16} aria-hidden="true" />
+            Khóa / Mở khóa tài khoản
           </span>
-          TMS.
-        </span>
-        <span className="acl-topbar-role">Quản trị hệ thống</span>
-      </header>
+          <button type="button" className="acl-nav-back" onClick={() => window.history.back()}>
+            <ChevronLeft size={18} aria-hidden="true" />
+            Quay lại
+          </button>
+        </nav>
+        <p className="acl-sidebar-foot">Nền tảng vận hành đào tạo TMS</p>
+      </aside>
 
       <main className="acl-main">
         <div className="acl-title-row">
           <div>
-            <h1>Quản lý tài khoản</h1>
-            <p>Tìm tài khoản, khoá khi người dùng nghỉ việc hoặc có dấu hiệu bất thường, mở khoá khi cần.</p>
+            <h1>S1-10: Khóa &amp; Mở khóa tài khoản</h1>
+            <p>Quản trị hệ thống có thể khóa hoặc mở khóa tài khoản người dùng</p>
           </div>
-          {data && !loadError && (
-            <span className="acl-total">
-              <Users size={16} aria-hidden="true" />
-              {data.total} tài khoản
-            </span>
-          )}
         </div>
 
         <div className="acl-live" aria-live="polite">
@@ -301,31 +332,53 @@ export function AccountLockPage() {
         <section className="acl-card" aria-label="Danh sách tài khoản">
           <div className="acl-toolbar">
             <div className="acl-search">
-              <Search size={17} aria-hidden="true" />
+              <Search size={16} aria-hidden="true" />
               <input
                 type="search"
                 value={searchInput}
                 maxLength={100}
-                placeholder="Tìm tên, email, số điện thoại"
+                placeholder="Tìm kiếm tài khoản, email..."
                 aria-label="Tìm tài khoản theo tên, email hoặc số điện thoại"
                 onChange={(event) => setSearchInput(event.target.value)}
               />
             </div>
-            <div className="acl-filters" role="group" aria-label="Lọc theo trạng thái">
-              {FILTERS.map((filter) => (
-                <button
-                  type="button"
-                  key={filter.label}
-                  className={status === filter.value ? 'acl-filter acl-filter-active' : 'acl-filter'}
-                  aria-pressed={status === filter.value}
-                  onClick={() => {
-                    setStatus(filter.value)
+            <div className="acl-filter-group">
+              <Funnel className="acl-filter-icon" size={34} strokeWidth={1.4} aria-hidden="true" />
+              <span className="acl-select-box">
+                <select
+                  value={status}
+                  aria-label="Lọc theo trạng thái"
+                  onChange={(event) => {
+                    setStatus(event.target.value as StatusFilter)
                     setPage(1)
                   }}
                 >
-                  {filter.label}
-                </button>
-              ))}
+                  {STATUS_FILTERS.map((filter) => (
+                    <option key={filter.label} value={filter.value}>
+                      {filter.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} aria-hidden="true" />
+              </span>
+              <span className="acl-select-box">
+                <select
+                  value={role}
+                  aria-label="Lọc theo vai trò"
+                  onChange={(event) => {
+                    setRole(event.target.value as RoleFilter)
+                    setPage(1)
+                  }}
+                >
+                  <option value="">Tất cả vai trò</option>
+                  {ROLE_ORDER.map((item) => (
+                    <option key={item} value={item}>
+                      {ROLE_LABEL[item]}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} aria-hidden="true" />
+              </span>
             </div>
           </div>
 
@@ -356,20 +409,10 @@ export function AccountLockPage() {
               <div className="acl-state">
                 <UserX size={30} aria-hidden="true" />
                 <h2>{filtering ? 'Không có tài khoản phù hợp' : 'Chưa có tài khoản nào'}</h2>
-                <p>{filtering ? 'Thử đổi từ khoá hoặc bộ lọc trạng thái.' : 'Tài khoản sẽ hiện ở đây sau khi được tạo.'}</p>
+                <p>{filtering ? 'Thử đổi từ khóa hoặc bộ lọc.' : 'Tài khoản sẽ hiện ở đây sau khi được tạo.'}</p>
                 {filtering && (
-                  <button
-                    type="button"
-                    className="acl-button acl-button-outline"
-                    onClick={() => {
-                      setSearchInput('')
-                      appliedQuery.current = ''
-                      setQ('')
-                      setStatus('')
-                      setPage(1)
-                    }}
-                  >
-                    Xoá bộ lọc
+                  <button type="button" className="acl-button acl-button-ghost" onClick={clearFilters}>
+                    Xóa bộ lọc
                   </button>
                 )}
               </div>
@@ -381,30 +424,36 @@ export function AccountLockPage() {
                   <caption className="acl-sr-only">Danh sách tài khoản, trang {tableData.page}/{tableData.totalPages}</caption>
                   <thead>
                     <tr>
-                      <th scope="col">Tài khoản</th>
+                      <th scope="col" className="acl-col-id">
+                        STT
+                      </th>
+                      <th scope="col">Tên người dùng</th>
+                      <th scope="col">Email</th>
                       <th scope="col">Vai trò</th>
                       <th scope="col">Trạng thái</th>
+                      <th scope="col">Phiên</th>
                       <th scope="col" className="acl-col-action">
-                        Thao tác
+                        Hành động
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((account) => (
+                    {items.map((account, index) => (
                       <tr key={account.id} className={account.status === 'LOCKED' ? 'acl-row-locked' : undefined}>
+                        <td className="acl-col-id">{(tableData.page - 1) * tableData.pageSize + index + 1}</td>
                         <td>
-                          <span className="acl-person">
-                            <strong>{account.fullName}</strong>
-                            <span>{account.email}</span>
-                            {account.phone && <span>{account.phone}</span>}
-                          </span>
+                          <strong className="acl-name">{account.fullName}</strong>
                         </td>
+                        <td className="acl-email">{account.email}</td>
                         <td>
                           <RoleChips roles={account.roles} />
                         </td>
                         <td>
                           <StatusBadge status={account.status} />
                           <LockedInfo account={account} />
+                        </td>
+                        <td>
+                          <SessionInfo status={account.status} />
                         </td>
                         <td className="acl-col-action">
                           <RowAction account={account} isSelf={account.id === currentUserId} onLock={setLockTarget} onUnlock={setUnlockTarget} />
@@ -421,13 +470,13 @@ export function AccountLockPage() {
                         <span className="acl-person">
                           <strong>{account.fullName}</strong>
                           <span>{account.email}</span>
-                          {account.phone && <span>{account.phone}</span>}
                         </span>
                         <StatusBadge status={account.status} />
                       </div>
                       <RoleChips roles={account.roles} />
                       <LockedInfo account={account} />
                       <div className="acl-account-card-action">
+                        <SessionInfo status={account.status} />
                         <RowAction account={account} isSelf={account.id === currentUserId} onLock={setLockTarget} onUnlock={setUnlockTarget} />
                       </div>
                     </li>

@@ -1,4 +1,4 @@
-import type { LockResult, StatusFilter, UnlockResult, UserPage } from './types'
+import type { LockResult, RoleFilter, StatusFilter, UnlockResult, UserPage } from './types'
 
 const API_URL = String(import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 
@@ -81,12 +81,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T
 }
 
-export type ListParams = { q: string; status: StatusFilter; page: number; pageSize: number }
+export type ListParams = { q: string; status: StatusFilter; role: RoleFilter; page: number; pageSize: number }
 
 export function listUsers(params: ListParams, signal?: AbortSignal): Promise<UserPage> {
   const query = new URLSearchParams()
   if (params.q) query.set('q', params.q)
   if (params.status) query.set('status', params.status)
+  if (params.role) query.set('role', params.role)
   query.set('page', String(params.page))
   query.set('pageSize', String(params.pageSize))
   return request<UserPage>(`/users?${query.toString()}`, { signal })

@@ -36,7 +36,7 @@ export type UserPage = {
 
 export type AssignedClass = { id: string; name: string }
 
-/** Khác null khi người bị khoá đang phụ trách lớp (hoặc không kiểm tra được danh sách lớp). */
+/** Khác null khi người bị khóa đang phụ trách lớp (hoặc không kiểm tra được danh sách lớp). */
 export type HandoverWarning = { message: string; classes: AssignedClass[] }
 
 export type LockResult = { user: UserAccount; handoverWarning: HandoverWarning | null }
@@ -45,10 +45,12 @@ export type UnlockResult = { user: UserAccount }
 
 export type StatusFilter = '' | UserStatus
 
+export type RoleFilter = '' | Role
+
 export const STATUS_LABEL: Record<UserStatus, string> = {
   ACTIVE: 'Hoạt động',
   PENDING_ACTIVATION: 'Chờ kích hoạt',
-  LOCKED: 'Đã khoá',
+  LOCKED: 'Đã khóa',
 }
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -61,3 +63,6 @@ export const ROLE_LABEL: Record<Role, string> = {
   STUDENT: 'Học viên',
   GUEST: 'Khách',
 }
+
+/** Thứ tự hiển thị vai trò trong form và bộ lọc. */
+export const ROLE_ORDER: Role[] = ['ADMIN', 'TRAINING_MANAGER', 'INSTRUCTOR', 'TA', 'ADMISSIONS', 'ACCOUNTANT', 'STUDENT', 'GUEST']
