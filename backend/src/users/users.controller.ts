@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { AdminGuard } from '../roles/admin.guard';
 import { buildHandoverWarning, ClassAssignmentLookup, HANDOVER_CHECK_FAILED, HandoverWarning } from './class-assignment';
@@ -62,5 +62,12 @@ export class UsersController {
   @HttpCode(200)
   unlock(@Param('id') id: string) {
     return { user: this.usersService.unlock(id) };
+  }
+
+  /** Xoá hẳn tài khoản (chỉ Quản trị hệ thống). Không tự xoá mình, không xoá Admin cuối cùng. */
+  @Delete(':id')
+  @HttpCode(200)
+  remove(@Param('id') id: string, @Req() req: Request) {
+    return this.usersService.remove(id, req.actor!.id);
   }
 }
