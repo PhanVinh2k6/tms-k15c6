@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Role } from '../roles/role.types';
-import { CreateUserInput, ListUsersQuery, UpdateUserInput, UserStatus } from './user.types';
+import { CreateUserInput, ListUsersQuery, LockUserInput, UpdateUserInput, UserStatus } from './user.types';
 
 type FieldErrors = Record<string, string>;
 
@@ -181,4 +181,17 @@ export function parseListQuery(query: Record<string, unknown>): ListUsersQuery {
     fail(errors);
   }
   return result;
+}
+
+export const LOCK_REASON_MIN = 3;
+export const LOCK_REASON_MAX = 500;
+
+/** Bắt buộc ghi lý do khoá (S1-10): chỉ toàn dấu cách thì coi như chưa ghi. */
+export function parseLockInput(body: unknown): LockUserInput {
+  const data = asObject(body);
+  const reason = typeof data.reason === 'string' ? data.reason.trim() : '';
+  if (reason.length < LOCK_REASON_MIN || reason.length > LOCK_REASON_MAX) {
+    fail({ reason: `Phải ghi lý do khoá, từ ${LOCK_REASON_MIN} đến ${LOCK_REASON_MAX} ký tự` });
+  }
+  return { reason };
 }
