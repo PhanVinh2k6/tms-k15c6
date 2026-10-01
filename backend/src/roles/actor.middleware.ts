@@ -15,11 +15,7 @@ export class ActorMiddleware implements NestMiddleware {
     const rawRoles = req.header('x-user-roles');
 
     if (!id || !rawRoles) {
-      throw new UnauthorizedException({
-        statusCode: 401,
-        code: 'UNAUTHORIZED',
-        message: 'Bạn chưa đăng nhập hoặc phiên đăng nhập không hợp lệ.',
-      });
+      throw new UnauthorizedException('Missing authenticated user context');
     }
 
     const roles = new Set(
