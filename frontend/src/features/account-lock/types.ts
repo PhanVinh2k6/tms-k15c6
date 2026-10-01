@@ -36,7 +36,7 @@ export type UserPage = {
 
 export type AssignedClass = { id: string; name: string }
 
-/** Khác null khi người bị khoá đang phụ trách lớp (hoặc không kiểm tra được danh sách lớp). */
+/** Khác null khi người bị khóa đang phụ trách lớp (hoặc không kiểm tra được danh sách lớp). */
 export type HandoverWarning = { message: string; classes: AssignedClass[] }
 
 export type LockResult = { user: UserAccount; handoverWarning: HandoverWarning | null }
@@ -67,7 +67,7 @@ export type DeleteResult = { id: string }
 export const STATUS_LABEL: Record<UserStatus, string> = {
   ACTIVE: 'Hoạt động',
   PENDING_ACTIVATION: 'Chờ kích hoạt',
-  LOCKED: 'Đã khoá',
+  LOCKED: 'Đã khóa',
 }
 
 export const ROLE_LABEL: Record<Role, string> = {
