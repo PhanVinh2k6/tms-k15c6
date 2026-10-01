@@ -158,6 +158,28 @@ export class UsersService {
   }
 
   /**
+   * Xoá hẳn tài khoản (không khôi phục được). Không cho tự xoá mình, và không xoá Quản trị hệ thống
+   * cuối cùng để hệ thống luôn còn người quản lý. Muốn giữ lại dữ liệu thì dùng khoá tài khoản (S1-10).
+   */
+  remove(id: string, actorId: string): { id: string } {
+    const user = this.getUser(id);
+    if (user.id === actorId) {
+      throw new ForbiddenException({ code: 'CANNOT_DELETE_SELF', message: 'Bạn không thể tự xoá tài khoản của mình.' });
+    }
+    if (user.roles.has(Role.ADMIN)) {
+      const admins = [...this.users.values()].filter((item) => item.roles.has(Role.ADMIN));
+      if (admins.length <= 1) {
+        throw new ConflictException({
+          code: 'CANNOT_DELETE_LAST_ADMIN',
+          message: 'Không thể xoá Quản trị hệ thống cuối cùng.',
+        });
+      }
+    }
+    this.users.delete(id);
+    return { id };
+  }
+
+  /**
    * Đổi mật khẩu của chính user hiện tại. sessionVersion được tăng để auth layer
    * vô hiệu hóa token/phiên cũ sau khi tích hợp S1-01/S1-02.
    */
