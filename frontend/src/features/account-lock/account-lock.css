@@ -517,3 +517,54 @@
   .acl-modal-actions .acl-button { width: 100%; }
   .acl-pager { justify-content: center; }
 }
+
+/* ---------- S1-08: nút thêm, bộ lọc vai trò, form tạo / sửa, xoá ---------- */
+.acl-title-actions { display: flex; flex-shrink: 0; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.acl-select-wrap { display: inline-flex; align-items: center; gap: 8px; color: var(--acl-muted); font-size: 14px; font-weight: 600; }
+.acl-select {
+  height: 42px;
+  padding: 0 34px 0 12px;
+  border: 1px solid #ced3e8;
+  border-radius: 12px;
+  background: #fbfbff;
+  color: var(--acl-ink);
+  font-weight: 600;
+}
+.acl-select:focus { border-color: var(--acl-brand); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(87, 69, 184, 0.18); }
+
+.acl-row-actions { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.acl-account-card-action .acl-row-actions { justify-content: flex-end; }
+
+.acl-field { display: block; margin: 0 0 4px; }
+.acl-field > .acl-field-error { display: block; min-height: 22px; margin-top: 3px; font-size: 13.5px; }
+.acl-input {
+  display: block;
+  width: 100%;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid #ced3e8;
+  border-radius: 12px;
+  background: #fbfbff;
+  color: var(--acl-ink);
+}
+.acl-input:focus { border-color: var(--acl-brand); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(87, 69, 184, 0.18); }
+.acl-input[aria-invalid='true'] { border-color: var(--acl-danger); background: #fffafb; }
+.acl-modal input, .acl-modal select { font: inherit; }
+
+.acl-fieldset { margin: 0 0 4px; padding: 0; border: 0; min-width: 0; }
+.acl-fieldset legend { padding: 0; }
+.acl-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.acl-check { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 1px solid #ced3e8; border-radius: 10px; background: #fbfbff; cursor: pointer; }
+.acl-check:has(input:checked) { border-color: var(--acl-brand); background: var(--acl-brand-soft); color: var(--acl-brand-dark); font-weight: 600; }
+.acl-check input { width: 16px; height: 16px; accent-color: var(--acl-brand); }
+
+.acl-hint { margin: 4px 0 0; padding: 10px 12px; border-radius: 12px; background: #f3f4fb; color: #46506b; font-size: 14px; }
+
+@media (max-width: 760px) {
+  .acl-title-actions { width: 100%; justify-content: space-between; }
+  .acl-select-wrap { width: 100%; }
+  .acl-select { flex: 1; }
+  .acl-row-actions { justify-content: flex-end; }
+  .acl-checks { grid-template-columns: 1fr; }
+}

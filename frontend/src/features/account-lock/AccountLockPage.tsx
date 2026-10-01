@@ -7,19 +7,25 @@ import {
   Clock3,
   Lock,
   LockOpen,
+  Pencil,
   RefreshCw,
   Search,
   ShieldAlert,
+  Trash2,
+  UserPlus,
   UserX,
   Users,
   WifiOff,
   X,
 } from 'lucide-react'
-import { ApiError, getCurrentUserId, listUsers, lockUser, unlockUser } from './api'
-import { LockDialog, UnlockDialog } from './ActionDialogs'
+import { ApiError, createUser, deleteUser, getCurrentUserId, listUsers, lockUser, unlockUser, updateUser } from './api'
+import { DeleteDialog, LockDialog, UnlockDialog } from './ActionDialogs'
+import { UserFormDialog } from './UserFormDialog'
 import { formatDateTime } from './format'
-import { ROLE_LABEL, STATUS_LABEL } from './types'
-import type { HandoverWarning, StatusFilter, UserAccount, UserPage, UserStatus } from './types'
+import { ROLE_LABEL, ROLE_ORDER, STATUS_LABEL } from './types'
+import type { HandoverWarning, RoleFilter, StatusFilter, UserAccount, UserPage, UserStatus } from './types'
+import { toCreatePayload, toUpdatePayload } from './validation'
+import type { FormValues } from './validation'
 import './account-lock.css'
 
 const PAGE_SIZE = 10
@@ -34,6 +40,9 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 
 /** Dữ liệu đã cũ so với server: báo rồi tải lại danh sách, không coi là lỗi của người dùng. */
 const STALE_CODES = new Set(['ALREADY_LOCKED', 'NOT_LOCKED', 'USER_NOT_FOUND'])
+
+/** Xoá bị từ chối vì quy tắc nghiệp vụ: báo cho người dùng, không phải dữ liệu cũ. */
+const DELETE_RULE_CODES = new Set(['CANNOT_DELETE_SELF', 'CANNOT_DELETE_LAST_ADMIN'])
 
 type Notice = { kind: 'success' | 'warning'; text: string }
 type LoadError = { kind: 'network' | 'denied' | 'other'; message: string }
@@ -89,35 +98,59 @@ function LockedInfo({ account }: { account: UserAccount }) {
 type RowActionProps = {
   account: UserAccount
   isSelf: boolean
+  onEdit: (account: UserAccount) => void
   onLock: (account: UserAccount) => void
   onUnlock: (account: UserAccount) => void
+  onDelete: (account: UserAccount) => void
 }
 
-function RowAction({ account, isSelf, onLock, onUnlock }: RowActionProps) {
-  if (account.status === 'LOCKED') {
-    return (
+function RowAction({ account, isSelf, onEdit, onLock, onUnlock, onDelete }: RowActionProps) {
+  return (
+    <span className="acl-row-actions">
       <button
         type="button"
         className="acl-button acl-button-outline"
-        aria-label={`Mở khoá tài khoản ${account.fullName}`}
-        onClick={() => onUnlock(account)}
+        aria-label={`Sửa tài khoản ${account.fullName}`}
+        onClick={() => onEdit(account)}
       >
-        <LockOpen size={15} aria-hidden="true" />
-        Mở khoá
+        <Pencil size={15} aria-hidden="true" />
+        Sửa
       </button>
-    )
-  }
-  if (isSelf) return <span className="acl-muted">Tài khoản của bạn</span>
-  return (
-    <button
-      type="button"
-      className="acl-button acl-button-outline acl-button-outline-danger"
-      aria-label={`Khoá tài khoản ${account.fullName}`}
-      onClick={() => onLock(account)}
-    >
-      <Lock size={15} aria-hidden="true" />
-      Khoá
-    </button>
+      {account.status === 'LOCKED' ? (
+        <button
+          type="button"
+          className="acl-button acl-button-outline"
+          aria-label={`Mở khoá tài khoản ${account.fullName}`}
+          onClick={() => onUnlock(account)}
+        >
+          <LockOpen size={15} aria-hidden="true" />
+          Mở khoá
+        </button>
+      ) : isSelf ? null : (
+        <button
+          type="button"
+          className="acl-button acl-button-outline acl-button-outline-danger"
+          aria-label={`Khoá tài khoản ${account.fullName}`}
+          onClick={() => onLock(account)}
+        >
+          <Lock size={15} aria-hidden="true" />
+          Khoá
+        </button>
+      )}
+      {isSelf ? (
+        <span className="acl-muted">Tài khoản của bạn</span>
+      ) : (
+        <button
+          type="button"
+          className="acl-button acl-button-outline acl-button-outline-danger"
+          aria-label={`Xoá tài khoản ${account.fullName}`}
+          onClick={() => onDelete(account)}
+        >
+          <Trash2 size={15} aria-hidden="true" />
+          Xoá
+        </button>
+      )}
+    </span>
   )
 }
 
@@ -127,6 +160,7 @@ export function AccountLockPage() {
   const [searchInput, setSearchInput] = useState('')
   const [q, setQ] = useState('')
   const [status, setStatus] = useState<StatusFilter>('')
+  const [role, setRole] = useState<RoleFilter>('')
   const [page, setPage] = useState(1)
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -136,6 +170,9 @@ export function AccountLockPage() {
 
   const [lockTarget, setLockTarget] = useState<UserAccount | null>(null)
   const [unlockTarget, setUnlockTarget] = useState<UserAccount | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [editTarget, setEditTarget] = useState<UserAccount | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<UserAccount | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [handover, setHandover] = useState<HandoverNotice | null>(null)
 
@@ -159,7 +196,7 @@ export function AccountLockPage() {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(null)
-    listUsers({ q, status, page, pageSize: PAGE_SIZE }, controller.signal)
+    listUsers({ q, status, role, page, pageSize: PAGE_SIZE }, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return
         if (result.totalPages > 0 && page > result.totalPages) {
@@ -175,7 +212,7 @@ export function AccountLockPage() {
         setLoading(false)
       })
     return () => controller.abort()
-  }, [q, status, page, reloadKey])
+  }, [q, status, role, page, reloadKey])
 
   useEffect(() => {
     if (!notice) return
@@ -191,6 +228,72 @@ export function AccountLockPage() {
       return { kind: 'warning', text: `Tài khoản ${name} hiện không bị khoá (có thể do người khác vừa mở khoá). Danh sách đã được tải lại.` }
     }
     return { kind: 'warning', text: `Không còn tìm thấy tài khoản ${name}. Danh sách đã được tải lại.` }
+  }
+
+  const clearFilters = () => {
+    setSearchInput('')
+    appliedQuery.current = ''
+    setQ('')
+    setStatus('')
+    setRole('')
+    setPage(1)
+  }
+
+  const confirmCreate = async (values: FormValues) => {
+    const created = await createUser(toCreatePayload(values))
+    setCreating(false)
+    setNotice({ kind: 'success', text: `Đã tạo tài khoản ${created.fullName}. Email kích hoạt đã được gửi tới ${created.email}.` })
+    clearFilters() // tài khoản mới xếp đầu danh sách; bỏ bộ lọc để người dùng thấy ngay
+    reload()
+  }
+
+  const confirmEdit = async (values: FormValues) => {
+    const target = editTarget
+    if (!target) return
+    const payload = toUpdatePayload(values, target)
+    if (Object.keys(payload).length === 0) {
+      setEditTarget(null)
+      setNotice({ kind: 'warning', text: `Không có thay đổi nào cho tài khoản ${target.fullName}.` })
+      return
+    }
+    try {
+      const updated = await updateUser(target.id, payload)
+      setEditTarget(null)
+      setNotice({ kind: 'success', text: `Đã cập nhật tài khoản ${updated.fullName}.` })
+      reload()
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'USER_NOT_FOUND') {
+        setEditTarget(null)
+        setNotice(staleNotice(error, target.fullName))
+        reload()
+        return
+      }
+      throw error
+    }
+  }
+
+  const confirmDelete = async () => {
+    const target = deleteTarget
+    if (!target) return
+    try {
+      await deleteUser(target.id)
+      setDeleteTarget(null)
+      setNotice({ kind: 'success', text: `Đã xoá tài khoản ${target.fullName}.` })
+      reload()
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'USER_NOT_FOUND') {
+        setDeleteTarget(null)
+        setNotice(staleNotice(error, target.fullName))
+        reload()
+        return
+      }
+      if (error instanceof ApiError && DELETE_RULE_CODES.has(error.code)) {
+        setDeleteTarget(null)
+        setNotice({ kind: 'warning', text: error.message })
+        return
+      }
+      throw error
+    }
   }
 
   const confirmLock = async (reason: string) => {
@@ -233,7 +336,7 @@ export function AccountLockPage() {
   }
 
   const items = data?.items ?? []
-  const filtering = q !== '' || status !== ''
+  const filtering = q !== '' || status !== '' || role !== ''
   const firstShown = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0
   const lastShown = data ? firstShown + items.length - 1 : 0
   const tableData = !loadError && data !== null && items.length > 0 ? data : null
@@ -256,14 +359,20 @@ export function AccountLockPage() {
         <div className="acl-title-row">
           <div>
             <h1>Quản lý tài khoản</h1>
-            <p>Tìm tài khoản, khoá khi người dùng nghỉ việc hoặc có dấu hiệu bất thường, mở khoá khi cần.</p>
+            <p>Thêm, sửa và tìm tài khoản; khoá khi người dùng nghỉ việc hoặc có dấu hiệu bất thường, mở khoá khi cần; xoá hẳn tài khoản tạo nhầm.</p>
           </div>
-          {data && !loadError && (
-            <span className="acl-total">
-              <Users size={16} aria-hidden="true" />
-              {data.total} tài khoản
-            </span>
-          )}
+          <div className="acl-title-actions">
+            {data && !loadError && (
+              <span className="acl-total">
+                <Users size={16} aria-hidden="true" />
+                {data.total} tài khoản
+              </span>
+            )}
+            <button type="button" className="acl-button acl-button-primary" onClick={() => setCreating(true)}>
+              <UserPlus size={16} aria-hidden="true" />
+              Thêm tài khoản
+            </button>
+          </div>
         </div>
 
         <div className="acl-live" aria-live="polite">
@@ -327,6 +436,25 @@ export function AccountLockPage() {
                 </button>
               ))}
             </div>
+            <label className="acl-select-wrap">
+              Vai trò
+              <select
+                className="acl-select"
+                value={role}
+                aria-label="Lọc theo vai trò"
+                onChange={(event) => {
+                  setRole(event.target.value as RoleFilter)
+                  setPage(1)
+                }}
+              >
+                <option value="">Tất cả vai trò</option>
+                {ROLE_ORDER.map((item) => (
+                  <option key={item} value={item}>
+                    {ROLE_LABEL[item]}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <div className="acl-body" aria-busy={loading}>
@@ -356,18 +484,12 @@ export function AccountLockPage() {
               <div className="acl-state">
                 <UserX size={30} aria-hidden="true" />
                 <h2>{filtering ? 'Không có tài khoản phù hợp' : 'Chưa có tài khoản nào'}</h2>
-                <p>{filtering ? 'Thử đổi từ khoá hoặc bộ lọc trạng thái.' : 'Tài khoản sẽ hiện ở đây sau khi được tạo.'}</p>
+                <p>{filtering ? 'Thử đổi từ khoá hoặc bộ lọc.' : 'Bấm “Thêm tài khoản” để tạo tài khoản đầu tiên.'}</p>
                 {filtering && (
                   <button
                     type="button"
                     className="acl-button acl-button-outline"
-                    onClick={() => {
-                      setSearchInput('')
-                      appliedQuery.current = ''
-                      setQ('')
-                      setStatus('')
-                      setPage(1)
-                    }}
+                    onClick={clearFilters}
                   >
                     Xoá bộ lọc
                   </button>
@@ -407,7 +529,14 @@ export function AccountLockPage() {
                           <LockedInfo account={account} />
                         </td>
                         <td className="acl-col-action">
-                          <RowAction account={account} isSelf={account.id === currentUserId} onLock={setLockTarget} onUnlock={setUnlockTarget} />
+                          <RowAction
+                            account={account}
+                            isSelf={account.id === currentUserId}
+                            onEdit={setEditTarget}
+                            onLock={setLockTarget}
+                            onUnlock={setUnlockTarget}
+                            onDelete={setDeleteTarget}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -428,7 +557,14 @@ export function AccountLockPage() {
                       <RoleChips roles={account.roles} />
                       <LockedInfo account={account} />
                       <div className="acl-account-card-action">
-                        <RowAction account={account} isSelf={account.id === currentUserId} onLock={setLockTarget} onUnlock={setUnlockTarget} />
+                        <RowAction
+                            account={account}
+                            isSelf={account.id === currentUserId}
+                            onEdit={setEditTarget}
+                            onLock={setLockTarget}
+                            onUnlock={setUnlockTarget}
+                            onDelete={setDeleteTarget}
+                          />
                       </div>
                     </li>
                   ))}
@@ -472,6 +608,9 @@ export function AccountLockPage() {
 
       {lockTarget && <LockDialog account={lockTarget} onConfirm={confirmLock} onClose={() => setLockTarget(null)} />}
       {unlockTarget && <UnlockDialog account={unlockTarget} onConfirm={confirmUnlock} onClose={() => setUnlockTarget(null)} />}
+      {creating && <UserFormDialog onSubmit={confirmCreate} onClose={() => setCreating(false)} />}
+      {editTarget && <UserFormDialog account={editTarget} onSubmit={confirmEdit} onClose={() => setEditTarget(null)} />}
+      {deleteTarget && <DeleteDialog account={deleteTarget} onConfirm={confirmDelete} onClose={() => setDeleteTarget(null)} />}
     </div>
   )
 }

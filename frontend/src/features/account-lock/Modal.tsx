@@ -10,7 +10,7 @@ type ModalProps = {
   children: ReactNode
 }
 
-const FOCUSABLE = 'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [href]'
+const FOCUSABLE = 'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [href]'
 
 /** Hộp thoại có bẫy phím Tab, đóng bằng Esc, trả focus về nút đã mở nó. */
 export function Modal({ titleId, title, busy = false, onClose, children }: ModalProps) {
