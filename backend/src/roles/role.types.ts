@@ -18,4 +18,5 @@ export interface User {
 export interface Actor {
   id: string;
   roles: Set<Role>;
+  sessionId?: string;
 }
