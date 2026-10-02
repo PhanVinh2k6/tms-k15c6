@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -6,10 +7,16 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Role } from '../roles/role.types';
 import { MailService } from './mail.service';
-import { generateActivationToken, generateTemporaryPassword, hashPassword, verifyPassword } from './password.util';
+import {
+  generateActivationToken,
+  generateTemporaryPassword,
+  hashPassword,
+  hashToken,
+  verifyPassword,
+} from './password.util';
 import {
   CreateUserInput,
   ListUsersQuery,
@@ -20,9 +27,10 @@ import {
   UserStatus,
   ChangePasswordInput,
 } from './user.types';
-import { normalizePhone, toSearchText } from './users.validation';
+import { normalizeEmail, normalizePhone, toSearchText } from './users.validation';
 
 const ACTIVATION_TTL_MS = 48 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 
 @Injectable()
 export class UsersService {
@@ -31,6 +39,7 @@ export class UsersService {
    * Map giữ thứ tự thêm vào, nên đảo ngược lại là "mới tạo xếp trước".
    */
   private readonly users = new Map<string, UserAccount>();
+  lastPasswordResetToken: string | null = null;
 
   constructor(private readonly mailService: MailService) {
     this.seed('admin-1', 'Quản trị hệ thống', 'admin@tms.local', [Role.ADMIN]);
@@ -60,6 +69,10 @@ export class UsersService {
       mustChangePassword: true,
       activationTokenHash: tokenHash,
       activationExpiresAt: expiresAt,
+      passwordResetTokenHash: null,
+      passwordResetExpiresAt: null,
+      resetTokenHash: null,
+      resetTokenExpiresAt: null,
       sessionVersion: 0,
       createdAt: now,
       updatedAt: now,
@@ -156,9 +169,102 @@ export class UsersService {
     user.passwordHash = await hashPassword(input.newPassword);
     user.mustChangePassword = false;
     user.sessionVersion += 1;
+    this.clearPasswordResetToken(user);
     user.updatedAt = new Date();
 
     return { message: 'Đổi mật khẩu thành công.' };
+  }
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const normalizedEmail = normalizeEmail(email);
+    const user = [...this.users.values()].find((candidate) => candidate.email === normalizedEmail);
+
+    if (user) {
+      const token = randomBytes(32).toString('base64url');
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+      const tokenHash = hashToken(token);
+
+      user.passwordResetTokenHash = tokenHash;
+      user.passwordResetExpiresAt = expiresAt;
+      user.resetTokenHash = tokenHash;
+      user.resetTokenExpiresAt = expiresAt;
+      this.lastPasswordResetToken = token;
+
+      const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+      try {
+        await this.mailService.sendPasswordReset({
+          to: user.email,
+          fullName: user.fullName,
+          resetLink: `${frontendUrl}/reset-password?token=${token}`,
+          expiresAt,
+        });
+      } catch {
+        this.clearPasswordResetToken(user);
+        throw new ServiceUnavailableException({
+          code: 'EMAIL_SEND_FAILED',
+          message: 'Không gửi được email đặt lại mật khẩu. Vui lòng thử lại.',
+        });
+      }
+    }
+
+    return { message: 'Nếu email tồn tại, chúng tôi đã gửi liên kết đặt lại mật khẩu.' };
+  }
+
+  async requestPasswordResetLink(email: string): Promise<{ message: string }> {
+    return this.requestPasswordReset(email);
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    return this.confirmPasswordReset(token, newPassword);
+  }
+
+  async confirmPasswordReset(token: string, newPassword: string): Promise<{ message: string }> {
+    const trimmedToken = token.trim();
+    const user = this.findUserByPasswordResetToken(trimmedToken);
+
+    if (!user) {
+      throw new BadRequestException({
+        code: 'INVALID_RESET_TOKEN',
+        message: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+      });
+    }
+
+    if (await verifyPassword(newPassword, user.passwordHash)) {
+      throw new ConflictException({
+        code: 'PASSWORD_UNCHANGED',
+        message: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+      });
+    }
+
+    user.passwordHash = await hashPassword(newPassword);
+    user.mustChangePassword = false;
+    user.sessionVersion += 1;
+    this.clearPasswordResetToken(user);
+    user.updatedAt = new Date();
+
+    return { message: 'Mật khẩu đã được đặt lại thành công.' };
+  }
+
+  private findUserByPasswordResetToken(token: string): UserAccount | null {
+    const tokenHash = hashToken(token);
+    const now = Date.now();
+
+    for (const user of this.users.values()) {
+      const expiresAt = user.passwordResetExpiresAt ?? user.resetTokenExpiresAt ?? null;
+      const hashedToken = user.passwordResetTokenHash ?? user.resetTokenHash ?? null;
+      if (hashedToken && expiresAt && expiresAt.getTime() > now && hashedToken === tokenHash) {
+        return user;
+      }
+    }
+
+    return null;
+  }
+
+  private clearPasswordResetToken(user: UserAccount): void {
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpiresAt = null;
+    user.resetTokenHash = null;
+    user.resetTokenExpiresAt = null;
   }
 
   private assertEmailAvailable(email: string): void {
@@ -207,6 +313,10 @@ export class UsersService {
       mustChangePassword: false,
       activationTokenHash: null,
       activationExpiresAt: null,
+      passwordResetTokenHash: null,
+      passwordResetExpiresAt: null,
+      resetTokenHash: null,
+      resetTokenExpiresAt: null,
       sessionVersion: 0,
       createdAt: now,
       updatedAt: now,
