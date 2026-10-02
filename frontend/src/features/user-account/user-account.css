@@ -1,26 +1,32 @@
-/* Trang Quản lý tài khoản (S1-08), giao diện theo thiết kế Figma "S1-08: Quản Lý Tài Khoản" (node 176:509).
+/* Trang Quản lý tài khoản (S1-08), giao diện theo thiết kế Figma "S1-08: Quản Lý Tài Khoản" (node 196:2, khung 1867 × 910).
+   Kích thước lấy theo khung Figma ở tỉ lệ 1:1. Chữ dùng font hệ thống như thiết kế (Segoe UI trên Windows).
    Mọi lớp bắt đầu bằng "acl-" để không đụng CSS của trang khác. */
 
 .acl-page {
-  --acl-ink: #0d1b35;
-  --acl-muted: #49627f;
-  --acl-line: #e6edf6;
-  --acl-brand: #7c16f4;
-  --acl-brand-dark: #5a0fb8;
-  --acl-brand-soft: #f3eafe;
-  --acl-danger: #d4154f;
-  --acl-danger-soft: #fff0f4;
-  --acl-warn: #8a5a00;
-  --acl-warn-soft: #fff4d6;
-  --acl-ok: #00835a;
-  --acl-ok-soft: #e9fbf4;
+  --acl-ink: #0f172b;
+  --acl-text: #45556c;
+  --acl-muted: #62748e;
+  --acl-faint: #90a1b9;
+  --acl-line: #f1f5f9;
+  --acl-field: #f8fafc;
+  --acl-field-line: #e2e8f0;
+  --acl-sidebar: #3b2885;
+  --acl-brand: #5b36d0;
+  --acl-brand-dark: #4a28b8;
+  --acl-brand-soft: #f1edfd;
+  --acl-danger: #e7000b;
+  --acl-danger-soft: #fef2f2;
+  --acl-warn: #bb4d00;
+  --acl-warn-soft: #fffbeb;
+  --acl-ok: #007a55;
+  --acl-ok-soft: #ecfdf5;
   box-sizing: border-box;
   display: flex;
   min-height: 100svh;
   color: var(--acl-ink);
-  background: #fff;
-  font-family: 'Inter', 'Segoe UI', sans-serif;
-  font-size: 14px;
+  background: #f1f3f7;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -32,6 +38,7 @@
 
 .acl-page button,
 .acl-page input,
+.acl-page select,
 .acl-page textarea {
   font: inherit;
 }
@@ -45,7 +52,7 @@
 }
 
 .acl-page :focus-visible {
-  outline: 3px solid rgba(124, 22, 244, 0.45);
+  outline: 3px solid rgba(91, 54, 208, 0.4);
   outline-offset: 2px;
 }
 
@@ -58,59 +65,83 @@
   white-space: nowrap;
 }
 
-/* ---------- Thanh bên (Figma: Sidebar 246px, nền tím) ---------- */
+/* ---------- Thanh bên (Figma: rộng 238px, nền #3b2885) ---------- */
 .acl-sidebar {
   position: sticky;
   top: 0;
+  z-index: 1;
   display: flex;
-  flex: 0 0 246px;
+  flex: 0 0 238px;
   flex-direction: column;
   align-self: flex-start;
-  width: 246px;
+  width: 238px;
   height: 100svh;
-  padding: 11px 13px 14px;
-  background: linear-gradient(to right, #3415a6, rgba(52, 21, 166, 0.79) 98%), #fff;
+  padding: 8px 20px 10px 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--acl-sidebar);
+  box-shadow: 2px 0 6px rgba(15, 23, 42, 0.07);
   color: #fff;
 }
 
-.acl-sidebar-brand { display: flex; align-items: center; gap: 15px; height: 40px; padding-left: 2px; font-size: 20px; font-weight: 700; }
-.acl-sidebar-nav { display: flex; flex-direction: column; gap: 14px; margin: 22px 12px 0 0; }
+.acl-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.acl-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 30px;
+}
 
 .acl-nav-current {
   display: flex;
   align-items: center;
-  gap: 14px;
-  height: 49px;
+  gap: 10px;
+  height: 39px;
   padding: 0 13px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.07);
-  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: #4c35a3;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .acl-nav-back {
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 0 15px;
+  gap: 11px;
+  height: 22px;
+  padding: 0 0 0 14px;
   border: 0;
   background: transparent;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
 }
 
-.acl-nav-back:hover { text-decoration: underline; }
-.acl-nav-link { display: flex; align-items: center; gap: 14px; height: 49px; padding: 0 13px; border-radius: 9px; color: #fff; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; }
-.acl-nav-link:hover { background: rgba(255, 255, 255, 0.07); }
-.acl-sidebar-foot { margin: auto 0 0; font-size: 12px; }
+.acl-nav-back:hover { color: #fff; }
+.acl-sidebar-foot { margin: auto 0 0 1px; color: rgba(255, 255, 255, 0.45); font-size: 11px; }
 .acl-sidebar :focus-visible { outline-color: rgba(255, 255, 255, 0.8); }
 
 /* ---------- Khung chính ---------- */
+/* Theo Figma: nội dung rộng 1300px, cách thanh bên 180px và mép phải 148px ở màn 1867px. */
 .acl-main {
   flex: 1;
   min-width: 0;
-  padding: 18px clamp(16px, 6vw, 100px) 56px clamp(16px, 4vw, 48px);
+  padding: 23px 16px 48px 48px;
+}
+
+.acl-content {
+  max-width: 1300px;
+  margin: 0 auto;
 }
 
 .acl-title-row {
@@ -118,27 +149,27 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  max-width: 1024px;
-  margin: 0 0 26px auto;
+  margin-bottom: 20px;
 }
 
-.acl-title-row h1 { margin: 0; font-size: 21px; font-weight: 700; line-height: 1.3; color: #0d1b35; }
-.acl-title-row p { margin: 6px 0 0; color: var(--acl-muted); font-size: 12px; }
+.acl-title-row h1 { margin: 0; color: var(--acl-ink); font-size: 20px; font-weight: 700; line-height: 28px; }
+.acl-title-row p { margin: 3px 0 0; color: var(--acl-muted); font-size: 12px; line-height: 18px; }
 
 .acl-add {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  height: 41px;
-  padding: 0 17px;
+  gap: 8px;
+  height: 37px;
+  margin-top: 4px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 9px;
-  background: linear-gradient(to right, #7d17f4, #f12888);
-  box-shadow: 0 4px 9px rgba(106, 0, 229, 0.2);
+  border-radius: 10px;
+  background: linear-gradient(to right, #5531c7, #b6378a);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.16);
   color: #fff;
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 600;
   transition: filter 0.15s;
 }
@@ -146,7 +177,7 @@
 .acl-add:hover { filter: brightness(1.08); }
 
 .acl-muted {
-  color: var(--acl-muted);
+  color: var(--acl-faint);
   font-size: 12px;
 }
 
@@ -160,8 +191,8 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 14px;
-  padding: 11px 12px 11px 14px;
-  border-radius: 14px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 12px;
   font-weight: 500;
 }
 
@@ -169,9 +200,10 @@
   flex: 1;
 }
 
-.acl-notice-success { background: var(--acl-ok-soft); color: var(--acl-ok); }
-.acl-notice-warning { background: var(--acl-warn-soft); color: var(--acl-warn); }
+.acl-notice-success { border: 1px solid #a4f4cf; background: var(--acl-ok-soft); color: var(--acl-ok); }
+.acl-notice-warning { border: 1px solid #fee685; background: var(--acl-warn-soft); color: var(--acl-warn); }
 
+/* Cảnh báo bàn giao lớp (dùng ở trang S1-10 khi khoá tài khoản). */
 .acl-handover {
   display: flex;
   align-items: flex-start;
@@ -190,31 +222,28 @@
 .acl-handover p { margin: 4px 0 0; }
 .acl-handover ul { margin: 8px 0 0; padding-left: 20px; }
 
-/* ---------- Thẻ danh sách ---------- */
-/* Theo Figma: khối nội dung rộng 1024px, cách mép phải 100px. */
+/* ---------- Thẻ danh sách (Figma: nền trắng, bo 16px, bóng nhẹ) ---------- */
 .acl-card {
-  max-width: 1024px;
-  margin: 0 0 0 auto;
   overflow: hidden;
-  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
   background: #fff;
-  box-shadow: 0 2px 5px rgba(16, 42, 76, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
 .acl-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 16px 16px 15px;
 }
 
 .acl-search {
   position: relative;
-  flex: 0 1 450px;
+  flex: 1 1 320px;
   min-width: 220px;
-  color: var(--acl-ink);
+  color: var(--acl-faint);
 }
 
 .acl-search svg { position: absolute; top: 50%; left: 14px; transform: translateY(-50%); pointer-events: none; }
@@ -222,35 +251,41 @@
 .acl-search input {
   width: 100%;
   height: 39px;
-  padding: 0 14px 0 39px;
-  border: 1px solid #dce5f0;
-  border-radius: 8px;
-  background: #f8fafd;
-  color: #102a4c;
+  padding: 0 14px 0 40px;
+  border: 1px solid var(--acl-field-line);
+  border-radius: 12px;
+  background: var(--acl-field);
+  color: var(--acl-ink);
   font-size: 12px;
 }
 
-.acl-search input::placeholder { color: #8294ae; }
-.acl-search input:focus { border-color: var(--acl-brand); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(124, 22, 244, 0.18); }
+.acl-search input::placeholder { color: var(--acl-faint); }
 
-.acl-filter-group { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-.acl-filter-field { display: inline-flex; align-items: center; gap: 11px; color: var(--acl-muted); font-size: 12px; }
-.acl-select-box { position: relative; display: inline-flex; align-items: center; color: #102a4c; }
-.acl-select-box svg { position: absolute; right: 16px; pointer-events: none; }
+.acl-search input:focus,
+.acl-select-box select:focus {
+  border-color: #a28af0;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91, 54, 208, 0.15);
+}
+
+.acl-filter-group { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.acl-filter-icon { flex-shrink: 0; margin: 0 1px 0 -1px; color: var(--acl-faint); }
+.acl-select-box { position: relative; display: inline-flex; align-items: center; color: #1d293d; }
+.acl-select-box svg { position: absolute; right: 1px; pointer-events: none; }
 
 .acl-select-box select {
-  height: 40px;
-  min-width: 126px;
-  padding: 0 34px 0 16px;
-  border: 1px solid #dce5f0;
-  border-radius: 8px;
-  background: #f8fafd;
-  color: #102a4c;
+  height: 41px;
+  padding: 0 29px 0 16px;
+  field-sizing: content; /* rộng theo lựa chọn đang chọn, như thiết kế */
+  border: 1px solid var(--acl-field-line);
+  border-radius: 12px;
+  background: var(--acl-field);
+  color: #1d293d;
   font-size: 12px;
   appearance: none;
+  cursor: pointer;
 }
-
-.acl-select-box select:focus { border-color: var(--acl-brand); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(124, 22, 244, 0.18); }
 
 .acl-body { min-height: 220px; }
 
@@ -258,44 +293,60 @@
 .acl-results-loading { opacity: 0.55; pointer-events: none; }
 
 /* ---------- Bảng (máy tính) ---------- */
-.acl-table { width: 100%; border-collapse: collapse; }
+.acl-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+/* Độ rộng cột theo Figma (bảng 1298px). */
+.acl-col-stt { width: 7.1%; }
+.acl-col-name { width: 16.6%; }
+.acl-col-email { width: 13.8%; }
+.acl-col-phone { width: 14.7%; }
+.acl-col-role { width: 13.2%; }
+.acl-col-status { width: 21.7%; }
+.acl-col-action { width: 12.9%; }
 
 .acl-table th {
-  height: 51px;
-  padding: 0 8px;
-  background: #f5f8fc;
-  color: #49627f;
-  font-size: 12px;
+  height: 47px;
+  padding: 0 24px;
+  border-top: 1px solid var(--acl-line);
+  border-bottom: 1px solid var(--acl-line);
+  background: var(--acl-field);
+  color: var(--acl-faint);
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.025em;
   text-align: left;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.acl-table td { height: 61px; padding: 10px 8px; border-top: 1px solid var(--acl-line); vertical-align: middle; color: #102a4c; font-size: 13px; }
-.acl-table th:first-child, .acl-table td:first-child { padding-left: 16px; }
-.acl-table th:last-child, .acl-table td:last-child { padding-right: 16px; }
+.acl-table td {
+  height: 61px;
+  padding: 8px 24px;
+  border-top: 1px solid var(--acl-line);
+  vertical-align: middle;
+  color: var(--acl-text);
+  font-size: 12px;
+}
+
 .acl-table thead + tbody tr:first-child td { border-top: 0; }
-.acl-table tbody tr:hover { background: #fafcff; }
-.acl-col-id { width: 70px; color: #8294ae !important; font-size: 12px !important; }
-.acl-table th.acl-col-id { color: #49627f !important; }
-.acl-col-action { text-align: right !important; white-space: nowrap; }
+.acl-table tbody tr:nth-child(even) { background: #fcfcfe; }
+.acl-table tbody tr:hover { background: #f8fafc; }
+.acl-table tr > :last-child { padding-right: 24px; }
+.acl-cell-action { text-align: right !important; white-space: nowrap; }
 
-.acl-row-locked { background: #fffafb; }
-.acl-table tbody tr.acl-row-locked:hover { background: #fff4f7; }
-
-.acl-name { display: block; color: #0d1b35; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
-.acl-sub { display: block; color: var(--acl-muted); font-size: 12px; }
-.acl-email { overflow-wrap: anywhere; }
+.acl-stt { color: var(--acl-faint) !important; }
+.acl-name { display: block; color: var(--acl-ink); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.acl-text { overflow-wrap: anywhere; }
 
 .acl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.acl-chip { padding: 4px 11px; border-radius: 6px; background: #f0f4f9; color: #102a4c; font-size: 12px; font-weight: 400; }
+.acl-chip { display: inline-flex; align-items: center; height: 25px; padding: 0 10px; border-radius: 6px; background: #f1f5f9; color: var(--acl-text); font-size: 12px; font-weight: 600; white-space: nowrap; }
 
 /* Trạng thái: chấm màu + chữ (không chỉ dựa vào màu). */
 .acl-badge {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 26px;
+  height: 27px;
   padding: 0 11px;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -304,22 +355,30 @@
   white-space: nowrap;
 }
 
-.acl-badge-dot { display: block; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
-.acl-badge-active { border-color: #7ce9c1; background: #e9fbf4; color: #00b97a; }
-.acl-badge-locked { border-color: #ffadc4; background: #fff0f4; color: #ff2967; }
-.acl-badge-pending-activation { border-color: #ffd58a; background: #fff6e0; color: #c77700; }
+.acl-badge-dot { display: block; flex-shrink: 0; width: 6px; height: 6px; border-radius: 999px; }
+.acl-badge-active { border-color: #d0fae5; background: #ecfdf5; color: #009966; }
+.acl-badge-active .acl-badge-dot { background: #00bc7d; }
+.acl-badge-pending-activation { border-color: #fef3c6; background: #fffbeb; color: #e17100; }
+.acl-badge-pending-activation .acl-badge-dot { background: #fe9a00; }
+.acl-badge-locked { border-color: #ffe2e2; background: #fef2f2; color: #e7000b; cursor: help; }
+.acl-badge-locked .acl-badge-dot { background: #fb2c36; }
 
-.acl-locked-info {
-  display: flex;
-  flex-direction: column;
-  margin-top: 6px;
-  max-width: 30ch;
-  color: #6b3140;
+/* Nút Sửa (Figma: biểu tượng bút + chữ "Sửa", màu xám). */
+.acl-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px 0 10px;
+  margin-right: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--acl-muted);
   font-size: 12px;
-  overflow-wrap: anywhere;
 }
 
-.acl-locked-info small { color: var(--acl-muted); font-size: 11.5px; }
+.acl-edit:hover { background: var(--acl-brand-soft); color: var(--acl-brand); }
 
 /* ---------- Thẻ tài khoản (điện thoại) ---------- */
 .acl-cards { display: none; margin: 0; padding: 0; list-style: none; }
@@ -334,9 +393,46 @@
 
 .acl-account-card:first-child { border-top: 0; }
 .acl-account-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.acl-account-card-action { display: flex; justify-content: flex-end; }
+.acl-account-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.acl-account-card-foot .acl-edit { margin-right: -8px; }
 
-/* ---------- Nút ---------- */
+.acl-person { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.acl-person strong { color: var(--acl-ink); font-size: 14px; }
+.acl-person span { color: var(--acl-muted); font-size: 13px; overflow-wrap: anywhere; }
+
+/* ---------- Phân trang (Figma: "Hiển thị 1 - 3 / 3 tài khoản · 20 dòng/trang", "Trang 1/1") ---------- */
+.acl-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 55px;
+  padding: 0 20px;
+  border-top: 1px solid var(--acl-line);
+  color: var(--acl-muted);
+  font-size: 11px;
+}
+
+.acl-pager-controls { display: inline-flex; align-items: center; gap: 20px; }
+.acl-page-label { color: var(--acl-text); font-weight: 600; }
+
+.acl-page-button {
+  display: inline-grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  padding: 0;
+  border: 1px solid var(--acl-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--acl-text);
+}
+
+.acl-page-button:hover:not(:disabled) { border-color: var(--acl-field-line); background: var(--acl-field); }
+.acl-page-button:disabled { color: var(--acl-faint); opacity: 0.8; }
+
+/* ---------- Nút dùng chung (hộp thoại, trạng thái lỗi) ---------- */
 .acl-button {
   display: inline-flex;
   align-items: center;
@@ -345,9 +441,9 @@
   height: 40px;
   padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: 11px;
-  font-size: 14.5px;
-  font-weight: 700;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
@@ -355,13 +451,11 @@
 .acl-button-primary { background: var(--acl-brand); color: #fff; }
 .acl-button-primary:hover:not(:disabled) { background: var(--acl-brand-dark); }
 .acl-button-danger { background: var(--acl-danger); color: #fff; }
-.acl-button-danger:hover:not(:disabled) { background: #8f1a2f; }
-.acl-button-ghost { background: transparent; color: #46506b; border-color: #ced3e8; }
-.acl-button-ghost:hover:not(:disabled) { background: #f3f4fb; }
-.acl-button-outline { height: 36px; padding: 0 13px; background: #fff; border-color: #c9cde6; color: var(--acl-brand-dark); }
+.acl-button-danger:hover:not(:disabled) { background: #c10007; }
+.acl-button-ghost { background: transparent; color: var(--acl-text); border-color: var(--acl-field-line); }
+.acl-button-ghost:hover:not(:disabled) { background: var(--acl-field); }
+.acl-button-outline { height: 36px; padding: 0 13px; background: #fff; border-color: var(--acl-field-line); color: var(--acl-brand-dark); }
 .acl-button-outline:hover:not(:disabled) { background: var(--acl-brand-soft); border-color: var(--acl-brand); }
-.acl-button-outline-danger { color: var(--acl-danger); border-color: #efc2ca; }
-.acl-button-outline-danger:hover:not(:disabled) { background: var(--acl-danger-soft); border-color: var(--acl-danger); }
 
 .acl-icon-button {
   display: inline-grid;
@@ -375,9 +469,8 @@
   color: inherit;
 }
 
-.acl-icon-button:hover:not(:disabled) { background: rgba(31, 42, 68, 0.08); }
+.acl-icon-button:hover:not(:disabled) { background: rgba(15, 23, 42, 0.07); }
 .acl-icon-button:disabled { opacity: 0.4; }
-.acl-icon-button-boxed { border: 1px solid #ced3e8; background: #fff; color: var(--acl-ink); }
 
 /* ---------- Trạng thái rỗng / lỗi / đang tải ---------- */
 .acl-state {
@@ -391,30 +484,15 @@
 }
 
 .acl-state svg { color: var(--acl-brand); }
-.acl-state h2 { margin: 6px 0 0; color: var(--acl-ink); font-size: 18px; }
+.acl-state h2 { margin: 6px 0 0; color: var(--acl-ink); font-size: 16px; }
 .acl-state p { margin: 0 0 8px; max-width: 46ch; }
 
 .acl-skeleton { display: grid; gap: 10px; padding: 20px; }
-.acl-skeleton span { height: 52px; border-radius: 12px; background: linear-gradient(90deg, #f0f1fa 25%, #f8f8ff 50%, #f0f1fa 75%); background-size: 200% 100%; animation: acl-shimmer 1.4s infinite linear; }
+.acl-skeleton span { height: 50px; border-radius: 10px; background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%); background-size: 200% 100%; animation: acl-shimmer 1.4s infinite linear; }
 
 @keyframes acl-shimmer { to { background-position: -200% 0; } }
 
-/* ---------- Phân trang ---------- */
-.acl-pager {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--acl-line);
-  color: var(--acl-muted);
-  font-size: 14px;
-}
-
-.acl-pager-controls { display: inline-flex; align-items: center; gap: 12px; color: var(--acl-ink); font-weight: 600; }
-
-/* ---------- Hộp thoại ---------- */
+/* ---------- Hộp thoại (không có trong Figma: giữ bố cục cũ, dùng màu của thiết kế) ---------- */
 .acl-backdrop {
   position: fixed;
   inset: 0;
@@ -422,7 +500,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(31, 24, 70, 0.5);
+  background: rgba(15, 23, 43, 0.45);
   backdrop-filter: blur(3px);
   animation: acl-fade 0.15s ease-out;
 }
@@ -432,13 +510,13 @@
   max-height: calc(100svh - 32px);
   overflow-y: auto;
   padding: 22px 24px 22px;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #fff;
   color: var(--acl-ink);
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  box-shadow: 0 30px 80px rgba(31, 24, 70, 0.35);
+  box-shadow: 0 30px 80px rgba(15, 23, 43, 0.3);
   animation: acl-rise 0.18s ease-out;
 }
 
@@ -446,30 +524,30 @@
 .acl-modal button, .acl-modal textarea { font: inherit; }
 .acl-modal button { cursor: pointer; }
 .acl-modal button:disabled { cursor: not-allowed; }
-.acl-modal :focus-visible { outline: 3px solid rgba(124, 22, 244, 0.45); outline-offset: 2px; }
+.acl-modal :focus-visible { outline: 3px solid rgba(91, 54, 208, 0.4); outline-offset: 2px; }
 
 .acl-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.acl-modal-head h2 { margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 21px; font-weight: 800; }
-.acl-modal-lead { margin: 0 0 16px; color: #46506b; }
+.acl-modal-head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.acl-modal-lead { margin: 0 0 16px; color: var(--acl-muted); }
 
-.acl-label { display: block; margin-bottom: 6px; font-weight: 700; }
+.acl-label { display: block; margin-bottom: 6px; font-weight: 600; }
 .acl-label span { color: var(--acl-danger); }
 
 .acl-textarea {
   display: block;
   width: 100%;
   padding: 11px 13px;
-  border: 1px solid #ced3e8;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  background: #fbfbff;
+  background: #f8fafc;
   color: var(--acl-ink);
   resize: vertical;
 }
 
-.acl-textarea:focus { border-color: var(--acl-brand); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(124, 22, 244, 0.18); }
+.acl-textarea:focus { border-color: #a28af0; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(91, 54, 208, 0.15); }
 .acl-textarea[aria-invalid='true'] { border-color: var(--acl-danger); background: #fffafb; }
 
-.acl-field-foot { display: flex; justify-content: space-between; gap: 12px; min-height: 22px; margin-top: 4px; font-size: 13.5px; }
+.acl-field-foot { display: flex; justify-content: space-between; gap: 12px; min-height: 22px; margin-top: 4px; font-size: 13px; }
 .acl-field-error { color: var(--acl-danger); font-weight: 600; }
 .acl-counter { margin-left: auto; color: var(--acl-muted); font-variant-numeric: tabular-nums; }
 .acl-counter-over { color: var(--acl-danger); font-weight: 700; }
@@ -482,8 +560,36 @@
 .acl-quote p { margin: 2px 0 0; overflow-wrap: anywhere; }
 .acl-quote small { color: var(--acl-muted); }
 
-.acl-notes { margin: 0 0 6px; padding-left: 20px; color: #46506b; font-size: 14.5px; }
+.acl-notes { margin: 0 0 6px; padding-left: 20px; color: var(--acl-text); font-size: 14px; }
 .acl-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+/* Form tạo / sửa tài khoản. */
+.acl-field { display: block; margin: 0 0 4px; }
+.acl-field > .acl-field-error { display: block; min-height: 22px; margin-top: 3px; font-size: 13px; }
+
+.acl-input {
+  display: block;
+  width: 100%;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: var(--acl-ink);
+}
+
+.acl-input:focus { border-color: #a28af0; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(91, 54, 208, 0.15); }
+.acl-input[aria-invalid='true'] { border-color: var(--acl-danger); background: #fffafb; }
+.acl-modal input, .acl-modal select { font: inherit; }
+
+.acl-fieldset { margin: 0 0 4px; padding: 0; border: 0; min-width: 0; }
+.acl-fieldset legend { padding: 0; }
+.acl-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.acl-check { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; cursor: pointer; }
+.acl-check:has(input:checked) { border-color: var(--acl-brand); background: var(--acl-brand-soft); color: var(--acl-brand-dark); font-weight: 600; }
+.acl-check input { width: 16px; height: 16px; accent-color: var(--acl-brand); }
+
+.acl-hint { margin: 4px 0 0; padding: 10px 12px; border-radius: 12px; background: #f1f5f9; color: var(--acl-text); font-size: 14px; }
 
 .acl-spin { animation: acl-rotate 0.8s linear infinite; }
 
@@ -495,100 +601,38 @@
   .acl-page *, .acl-modal, .acl-backdrop { animation: none !important; transition: none !important; }
 }
 
-/* ---------- Điện thoại ---------- */
-@media (max-width: 760px) {
-  .acl-table { display: none; }
-  .acl-cards { display: block; }
-  .acl-title-row { flex-direction: column; align-items: flex-start; }
-  .acl-toolbar { padding: 14px; }
-  .acl-search { flex-basis: 100%; }
-  .acl-filter-group { width: 100%; justify-content: space-between; }
-  .acl-filter-field { flex: 1 1 100%; justify-content: space-between; }
-  .acl-select-box { flex: 1; }
-  .acl-select-box select { width: 100%; }
-  .acl-add { width: 100%; }
-  .acl-modal { padding: 18px 16px; }
-  .acl-modal-actions { flex-direction: column-reverse; }
-  .acl-modal-actions .acl-button { width: 100%; }
-  .acl-pager { justify-content: center; }
+/* ---------- Màn hình vừa: bảng hẹp lại ---------- */
+@media (max-width: 1280px) {
+  .acl-main { padding: 22px 24px 48px; }
+  .acl-table th, .acl-table td { padding-left: 14px; padding-right: 14px; }
+  .acl-table tr > :last-child { padding-right: 18px; }
 }
-
-/* ---------- S1-08: form tạo / sửa, hành động trên dòng ---------- */
-
-.acl-row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 14px; }
-.acl-account-card-action .acl-row-actions { justify-content: flex-end; }
-
-.acl-field { display: block; margin: 0 0 4px; }
-.acl-field > .acl-field-error { display: block; min-height: 22px; margin-top: 3px; font-size: 13.5px; }
-.acl-input {
-  display: block;
-  width: 100%;
-  height: 42px;
-  padding: 0 13px;
-  border: 1px solid #ced3e8;
-  border-radius: 12px;
-  background: #fbfbff;
-  color: var(--acl-ink);
-}
-.acl-input:focus { border-color: var(--acl-brand); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(124, 22, 244, 0.18); }
-.acl-input[aria-invalid='true'] { border-color: var(--acl-danger); background: #fffafb; }
-.acl-modal input, .acl-modal select { font: inherit; }
-
-.acl-fieldset { margin: 0 0 4px; padding: 0; border: 0; min-width: 0; }
-.acl-fieldset legend { padding: 0; }
-.acl-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
-.acl-check { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 1px solid #ced3e8; border-radius: 10px; background: #fbfbff; cursor: pointer; }
-.acl-check:has(input:checked) { border-color: var(--acl-brand); background: var(--acl-brand-soft); color: var(--acl-brand-dark); font-weight: 600; }
-.acl-check input { width: 16px; height: 16px; accent-color: var(--acl-brand); }
-
-.acl-hint { margin: 4px 0 0; padding: 10px 12px; border-radius: 12px; background: #f3f4fb; color: #46506b; font-size: 14px; }
-
-@media (max-width: 760px) {
-  .acl-checks { grid-template-columns: 1fr; }
-}
-
-/* Hành động theo Figma: nút Khóa (cam) / Mở khóa (tím) + biểu tượng Sửa, Xóa. */
-.acl-button-lock,
-.acl-button-unlock { height: 29px; padding: 0 12px; gap: 6px; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 600; }
-.acl-button-lock { background: #ff9800; }
-.acl-button-lock:hover:not(:disabled) { background: #e68900; }
-.acl-button-unlock { background: #7c16f4; }
-.acl-button-unlock:hover:not(:disabled) { background: #6609cf; }
-
-.acl-icon-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #7e93b0;
-}
-
-.acl-icon-action:hover:not(:disabled) { background: #f0f4f9; color: #49627f; }
-.acl-icon-action-danger:hover:not(:disabled) { background: #fff0f4; color: #ff2967; }
-.acl-icon-action-off { cursor: default; }
 
 /* ---------- Màn hình hẹp: thanh bên thành thanh ngang ---------- */
 @media (max-width: 900px) {
   .acl-page { flex-direction: column; }
-  .acl-sidebar { position: static; flex: none; width: 100%; height: auto; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; }
+  .acl-sidebar { position: static; flex: none; width: 100%; height: auto; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; border-right: 0; box-shadow: none; }
   .acl-sidebar-nav { flex-direction: row; align-items: center; gap: 8px; margin: 0 0 0 auto; }
-  .acl-nav-current { height: 36px; font-size: 14px; }
-  .acl-nav-current svg, .acl-nav-link svg { display: none; }
-  .acl-nav-link { height: 36px; font-size: 14px; }
+  .acl-nav-current { height: 34px; }
+  .acl-nav-back { padding-left: 4px; gap: 6px; }
   .acl-sidebar-foot { display: none; }
   .acl-main { padding: 18px 16px 40px; }
 }
 
-/* Thông tin người dùng trong thẻ trên điện thoại. */
-.acl-person { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.acl-person strong { color: #0d1b35; font-size: 14px; }
-.acl-person span { color: var(--acl-muted); font-size: 13px; overflow-wrap: anywhere; }
-
-/* Thông báo và cảnh báo bàn giao thẳng hàng với bảng. */
-.acl-live,
-.acl-handover { max-width: 1024px; margin-left: auto; }
+/* ---------- Điện thoại ---------- */
+@media (max-width: 760px) {
+  .acl-table { display: none; }
+  .acl-cards { display: block; }
+  .acl-title-row { flex-direction: column; align-items: stretch; }
+  .acl-add { width: 100%; margin-top: 0; }
+  .acl-toolbar { padding: 14px; }
+  .acl-search { flex-basis: 100%; }
+  .acl-filter-group { width: 100%; flex-wrap: nowrap; }
+  .acl-select-box { flex: 1; min-width: 0; }
+  .acl-select-box select { width: 100%; }
+  .acl-pager { justify-content: center; padding: 10px 16px; text-align: center; }
+  .acl-modal { padding: 18px 16px; }
+  .acl-modal-actions { flex-direction: column-reverse; }
+  .acl-modal-actions .acl-button { width: 100%; }
+  .acl-checks { grid-template-columns: 1fr; }
+}

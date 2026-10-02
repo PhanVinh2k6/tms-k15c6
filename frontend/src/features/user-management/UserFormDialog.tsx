@@ -61,7 +61,7 @@ export function UserFormDialog({ account, onSubmit, onClose }: UserFormDialogPro
     }
   }
 
-  const title = editing ? 'Sửa tài khoản' : 'Thêm tài khoản'
+  const title = editing ? 'Sửa tài khoản' : 'Tạo tài khoản'
   const Icon = editing ? Save : UserPlus
 
   return (

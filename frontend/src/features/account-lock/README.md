@@ -57,28 +57,34 @@ Component tự import CSS của nó, mọi lớp CSS bắt đầu bằng `acl-` 
 
 Tìm kiếm, bộ lọc, form thêm / sửa và hộp thoại xoá nằm ở `src/features/user-management/` (xem README trong đó).
 
-- **Thêm:** nút “Thêm tài khoản” → `UserFormDialog` (họ tên, email, số điện thoại, chọn ít nhất 1 vai trò). Gọi `POST /users`; `409 EMAIL_ALREADY_EXISTS` hiện ngay dưới ô email.
+- **Tạo:** nút “Tạo tài khoản” → `UserFormDialog` (họ tên, email, số điện thoại, chọn ít nhất 1 vai trò). Gọi `POST /users`; `409 EMAIL_ALREADY_EXISTS` hiện ngay dưới ô email.
 - **Sửa:** nút “Sửa” trên mỗi dòng → cùng form, chỉ gửi trường đã đổi qua `PATCH /users/:id`. Vai trò đổi ở S1-09, khóa ở S1-10 nên không có trong form này.
-- **Lọc vai trò:** ô chọn “Vai trò” cạnh bộ lọc trạng thái, gửi `?role=`.
-- **Xoá:** nút “Xoá” → hộp thoại cảnh báo không khôi phục được → `DELETE /users/:id` (backend: nhánh `feature/S1-08-user-account`). Không hiện nút xoá ở dòng của chính mình; backend cũng chặn `CANNOT_DELETE_SELF` và `CANNOT_DELETE_LAST_ADMIN`.
+- **Lọc:** ô chọn “Tất cả vai trò” (`?role=`) và “Tất cả trạng thái” (`?status=`); 20 dòng / trang như mặc định của backend.
+- **Xoá:** thiết kế S1-08 mới không có nút xoá nên trang không hiện nữa. API `DELETE /users/:id` và `DeleteUserDialog` vẫn giữ trong `user-management/` nếu nhóm cần lại.
 - Kiểm tra dữ liệu ở `user-management/validation.ts` giống backend (họ tên 2–100 ký tự, email, số điện thoại `0xxxxxxxxx`), backend vẫn là nơi quyết định cuối cùng.
 
 ## Giao diện theo Figma (S1-08)
 
-Bố cục, màu và chữ theo khung **"S1-08: Quản Lý Tài Khoản"** (node `176:509`) trong file Figma của nhóm:
-thanh bên tím "TMS System", bảng cột ID / Tên người dùng / Email / Vai trò / Trạng thái / Hành động,
-nút "Khóa" màu cam, "Mở khóa" màu tím, biểu tượng sửa / xóa, nút "Thêm tài khoản" chuyển màu tím → hồng, font Inter.
+Theo khung **"S1-08: Quản Lý Tài Khoản"** (node `196:2`, khung 1867 × 910, thay cho node `176:509` cũ) trong file Figma của nhóm.
+Khung là ảnh phẳng nên kích thước và màu được đo trực tiếp trên ảnh, dựng lại ở tỉ lệ 1:1:
+- Thanh bên `#3b2885` rộng 238px: "TMS System", mục "Quản lý tài khoản" (nền `#4c35a3`), "Quay lại", chân "Nền tảng vận hành đào tạo TMS".
+- Tiêu đề + dòng phụ "Tạo, sửa và tìm kiếm tài khoản người dùng"; nút "Tạo tài khoản" chuyển màu `#5531c7` → `#b6378a`.
+- Thẻ trắng bo 16px rộng tối đa 1300px: ô tìm "Tìm theo tên, email, số điện thoại...", biểu tượng phễu, ô chọn "Tất cả vai trò" / "Tất cả trạng thái".
+- Bảng STT / Tên người dùng / Email / Số điện thoại / Vai trò / Trạng thái / Hành động; nhãn "Đang hoạt động" (xanh), "Chờ kích hoạt" (cam); nút "Sửa".
+- Chân bảng "Hiển thị 1 - 3 / 3 tài khoản · 20 dòng/trang" và "Trang 1/1" với nút trước / sau.
+- Chữ là font hệ thống như ảnh thiết kế (Segoe UI trên Windows), cỡ 11–12px, tiêu đề 20px.
 
-Khác với thiết kế (giữ lại vì là chức năng S1-10 đã có):
-- Thêm ô lọc "Trạng thái" cạnh ô lọc "Vai trò".
-- Tài khoản bị khóa hiện thêm lý do và thời điểm khóa dưới nhãn "Locked"; tài khoản chưa kích hoạt hiện nhãn "Pending".
-- Cột ID hiện số thứ tự (#1, #2…), vì id thật là chuỗi dài.
+Khác với thiết kế:
+- Tài khoản bị khóa hiện nhãn "Đã khóa" (đỏ); lý do và thời điểm khóa nằm trong chú thích khi rê chuột. Khóa / mở khóa làm ở trang S1-10.
+- Vai trò hiện tên tiếng Việt của hệ thống ("Quản trị hệ thống", "Học viên"…) thay cho "Admin / User / Manager" trong ảnh mẫu.
+- Ô chọn rộng theo lựa chọn đang chọn (`field-sizing: content`, Chrome / Edge); trình duyệt khác rộng theo lựa chọn dài nhất.
+- Dưới 900px thanh bên thành thanh ngang; dưới 760px bảng thành thẻ.
 
 ## Hai trang
 
 | Trang | File | Thiết kế |
 |---|---|---|
-| `admin-users.html` — Quản lý tài khoản (S1-08: thêm, sửa, xóa, lọc, khóa / mở khóa) | `src/features/user-account/UserAccountPage.tsx` | Figma "S1-08: Quản Lý Tài Khoản" |
+| `admin-users.html` — Quản lý tài khoản (S1-08: tạo, sửa, tìm kiếm, lọc) | `src/features/user-account/UserAccountPage.tsx` | Figma "S1-08: Quản Lý Tài Khoản" |
 | `admin-account-lock.html` — Khóa / Mở khóa tài khoản (S1-10) | `src/features/account-lock/AccountLockPage.tsx` | Figma "S1-10 : Khóa & Mở Khóa Tài Khoản" |
 
 API, kiểu dữ liệu và `Modal` dùng chung nằm trong `src/features/account-lock/`; tìm kiếm, thêm, xoá, hộp thoại và luồng khóa / mở khóa nằm trong `src/features/user-management/`.
