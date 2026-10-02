@@ -1,4 +1,4 @@
-import type { CreateUserPayload, Role, UpdateUserPayload, UserAccount } from './types'
+import type { CreateUserPayload, Role, UpdateUserPayload, UserAccount } from '../account-lock/types'
 
 /** Kiểm tra giống backend (users.validation.ts) để báo lỗi ngay, backend vẫn là nơi quyết định cuối cùng. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

@@ -1,17 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Funnel,
   Lock,
   LockKeyhole,
   LockOpen,
   Plus,
   RefreshCw,
-  Search,
   Shield,
   ShieldAlert,
   SquarePen,
@@ -21,25 +18,16 @@ import {
   WifiOff,
   X,
 } from 'lucide-react'
-import { ApiError, createUser, deleteUser, getCurrentUserId, listUsers, lockUser, unlockUser, updateUser } from '../account-lock/api'
-import { DeleteDialog, LockDialog, UnlockDialog } from '../account-lock/ActionDialogs'
-import { UserFormDialog } from '../account-lock/UserFormDialog'
+import { ApiError, createUser, deleteUser, getCurrentUserId, lockUser, unlockUser, updateUser } from '../account-lock/api'
+import { LockDialog, UnlockDialog } from '../account-lock/ActionDialogs'
 import { formatDateTime } from '../account-lock/format'
-import { ROLE_LABEL, ROLE_ORDER, STATUS_LABEL } from '../account-lock/types'
-import type { HandoverWarning, RoleFilter, StatusFilter, UserAccount, UserPage, UserStatus } from '../account-lock/types'
-import { toCreatePayload, toUpdatePayload } from '../account-lock/validation'
-import type { FormValues } from '../account-lock/validation'
+import { ROLE_LABEL, STATUS_LABEL } from '../account-lock/types'
+import type { HandoverWarning, UserAccount, UserStatus } from '../account-lock/types'
+import { DeleteUserDialog, UserFormDialog, UserSearchBar, toCreatePayload, toUpdatePayload, useUserSearch } from '../user-management'
+import type { FormValues } from '../user-management'
 import './user-account.css'
 
 const PAGE_SIZE = 10
-const SEARCH_DEBOUNCE_MS = 350
-
-const FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: '', label: 'Tất cả' },
-  { value: 'ACTIVE', label: 'Hoạt động' },
-  { value: 'PENDING_ACTIVATION', label: 'Chờ kích hoạt' },
-  { value: 'LOCKED', label: 'Đã khóa' },
-]
 
 /** Dữ liệu đã cũ so với server: báo rồi tải lại danh sách, không coi là lỗi của người dùng. */
 const STALE_CODES = new Set(['ALREADY_LOCKED', 'NOT_LOCKED', 'USER_NOT_FOUND'])
@@ -164,16 +152,10 @@ function RowAction({ account, isSelf, onEdit, onLock, onUnlock, onDelete }: RowA
 export function UserAccountPage() {
   const currentUserId = getCurrentUserId()
 
-  const [searchInput, setSearchInput] = useState('')
-  const [q, setQ] = useState('')
-  const [status, setStatus] = useState<StatusFilter>('')
-  const [role, setRole] = useState<RoleFilter>('')
-  const [page, setPage] = useState(1)
-  const [reloadKey, setReloadKey] = useState(0)
-
-  const [data, setData] = useState<UserPage | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<LoadError | null>(null)
+  // Tìm kiếm, lọc, phân trang: hook useUserSearch (src/features/user-management).
+  const search = useUserSearch(PAGE_SIZE)
+  const { data, loading, filtering, setPage, clearFilters, reload } = search
+  const loadError: LoadError | null = search.error ? toLoadError(search.error) : null
 
   const [lockTarget, setLockTarget] = useState<UserAccount | null>(null)
   const [unlockTarget, setUnlockTarget] = useState<UserAccount | null>(null)
@@ -182,44 +164,6 @@ export function UserAccountPage() {
   const [deleteTarget, setDeleteTarget] = useState<UserAccount | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [handover, setHandover] = useState<HandoverNotice | null>(null)
-
-  const reload = useCallback(() => setReloadKey((key) => key + 1), [])
-
-  // Gõ tìm kiếm: đợi người dùng ngừng gõ rồi mới gọi API và quay về trang 1.
-  // Chỉ đặt lại trang khi từ khóa thật sự đổi, để bấm "Trang sau" ngay lúc mở trang không bị kéo về trang 1.
-  const appliedQuery = useRef('')
-  useEffect(() => {
-    const next = searchInput.trim()
-    if (next === appliedQuery.current) return
-    const timer = window.setTimeout(() => {
-      appliedQuery.current = next
-      setQ(next)
-      setPage(1)
-    }, SEARCH_DEBOUNCE_MS)
-    return () => window.clearTimeout(timer)
-  }, [searchInput])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    setLoading(true)
-    setLoadError(null)
-    listUsers({ q, status, role, page, pageSize: PAGE_SIZE }, controller.signal)
-      .then((result) => {
-        if (controller.signal.aborted) return
-        if (result.totalPages > 0 && page > result.totalPages) {
-          setPage(result.totalPages) // trang hiện tại không còn (vừa đổi bộ lọc / dữ liệu thay đổi)
-          return
-        }
-        setData(result)
-        setLoading(false)
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        setLoadError(toLoadError(error))
-        setLoading(false)
-      })
-    return () => controller.abort()
-  }, [q, status, role, page, reloadKey])
 
   useEffect(() => {
     if (!notice) return
@@ -235,15 +179,6 @@ export function UserAccountPage() {
       return { kind: 'warning', text: `Tài khoản ${name} hiện không bị khóa (có thể do người khác vừa mở khóa). Danh sách đã được tải lại.` }
     }
     return { kind: 'warning', text: `Không còn tìm thấy tài khoản ${name}. Danh sách đã được tải lại.` }
-  }
-
-  const clearFilters = () => {
-    setSearchInput('')
-    appliedQuery.current = ''
-    setQ('')
-    setStatus('')
-    setRole('')
-    setPage(1)
   }
 
   const confirmCreate = async (values: FormValues) => {
@@ -343,7 +278,6 @@ export function UserAccountPage() {
   }
 
   const items = data?.items ?? []
-  const filtering = q !== '' || status !== '' || role !== ''
   const firstShown = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0
   const lastShown = data ? firstShown + items.length - 1 : 0
   const tableData = !loadError && data !== null && items.length > 0 ? data : null
@@ -417,63 +351,14 @@ export function UserAccountPage() {
         )}
 
         <section className="acl-card" aria-label="Danh sách tài khoản">
-          <div className="acl-toolbar">
-            <div className="acl-search">
-              <Search size={15} aria-hidden="true" />
-              <input
-                type="search"
-                value={searchInput}
-                maxLength={100}
-                placeholder="Tìm kiếm tài khoản, email..."
-                aria-label="Tìm tài khoản theo tên, email hoặc số điện thoại"
-                onChange={(event) => setSearchInput(event.target.value)}
-              />
-            </div>
-            <div className="acl-filter-group">
-              <label className="acl-filter-field">
-                <Funnel size={17} aria-hidden="true" />
-                <span>Vai trò:</span>
-                <span className="acl-select-box">
-                  <select
-                    value={role}
-                    aria-label="Lọc theo vai trò"
-                    onChange={(event) => {
-                      setRole(event.target.value as RoleFilter)
-                      setPage(1)
-                    }}
-                  >
-                    <option value="">Tất cả vai trò</option>
-                    {ROLE_ORDER.map((item) => (
-                      <option key={item} value={item}>
-                        {ROLE_LABEL[item]}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={12} aria-hidden="true" />
-                </span>
-              </label>
-              <label className="acl-filter-field">
-                <span>Trạng thái:</span>
-                <span className="acl-select-box">
-                  <select
-                    value={status}
-                    aria-label="Lọc theo trạng thái"
-                    onChange={(event) => {
-                      setStatus(event.target.value as StatusFilter)
-                      setPage(1)
-                    }}
-                  >
-                    {FILTERS.map((filter) => (
-                      <option key={filter.label} value={filter.value}>
-                        {filter.label === 'Tất cả' ? 'Tất cả trạng thái' : filter.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={12} aria-hidden="true" />
-                </span>
-              </label>
-            </div>
-          </div>
+          <UserSearchBar
+            searchInput={search.searchInput}
+            onSearchChange={search.setSearchInput}
+            role={search.role}
+            onRoleChange={search.setRole}
+            status={search.status}
+            onStatusChange={search.setStatus}
+          />
 
           <div className="acl-body" aria-busy={loading}>
             {loadError && (
@@ -631,7 +516,7 @@ export function UserAccountPage() {
       {unlockTarget && <UnlockDialog account={unlockTarget} onConfirm={confirmUnlock} onClose={() => setUnlockTarget(null)} />}
       {creating && <UserFormDialog onSubmit={confirmCreate} onClose={() => setCreating(false)} />}
       {editTarget && <UserFormDialog account={editTarget} onSubmit={confirmEdit} onClose={() => setEditTarget(null)} />}
-      {deleteTarget && <DeleteDialog account={deleteTarget} onConfirm={confirmDelete} onClose={() => setDeleteTarget(null)} />}
+      {deleteTarget && <DeleteUserDialog account={deleteTarget} onConfirm={confirmDelete} onClose={() => setDeleteTarget(null)} />}
     </div>
   )
 }

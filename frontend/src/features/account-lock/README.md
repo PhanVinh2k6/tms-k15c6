@@ -55,11 +55,13 @@ Component tự import CSS của nó, mọi lớp CSS bắt đầu bằng `acl-` 
 
 ## S1-08 — thêm, sửa, lọc vai trò, xoá
 
+Tìm kiếm, bộ lọc, form thêm / sửa và hộp thoại xoá nằm ở `src/features/user-management/` (xem README trong đó).
+
 - **Thêm:** nút “Thêm tài khoản” → `UserFormDialog` (họ tên, email, số điện thoại, chọn ít nhất 1 vai trò). Gọi `POST /users`; `409 EMAIL_ALREADY_EXISTS` hiện ngay dưới ô email.
 - **Sửa:** nút “Sửa” trên mỗi dòng → cùng form, chỉ gửi trường đã đổi qua `PATCH /users/:id`. Vai trò đổi ở S1-09, khóa ở S1-10 nên không có trong form này.
 - **Lọc vai trò:** ô chọn “Vai trò” cạnh bộ lọc trạng thái, gửi `?role=`.
-- **Xoá:** nút “Xoá” → hộp thoại cảnh báo không khôi phục được → `DELETE /users/:id` (backend: nhánh `feature/S1-08-delete-account-api`). Không hiện nút xoá ở dòng của chính mình; backend cũng chặn `CANNOT_DELETE_SELF` và `CANNOT_DELETE_LAST_ADMIN`.
-- Kiểm tra dữ liệu ở `validation.ts` giống backend (họ tên 2–100 ký tự, email, số điện thoại `0xxxxxxxxx`), backend vẫn là nơi quyết định cuối cùng.
+- **Xoá:** nút “Xoá” → hộp thoại cảnh báo không khôi phục được → `DELETE /users/:id` (backend: nhánh `feature/S1-08-user-account`). Không hiện nút xoá ở dòng của chính mình; backend cũng chặn `CANNOT_DELETE_SELF` và `CANNOT_DELETE_LAST_ADMIN`.
+- Kiểm tra dữ liệu ở `user-management/validation.ts` giống backend (họ tên 2–100 ký tự, email, số điện thoại `0xxxxxxxxx`), backend vẫn là nơi quyết định cuối cùng.
 
 ## Giao diện theo Figma (S1-08)
 
@@ -79,7 +81,7 @@ Khác với thiết kế (giữ lại vì là chức năng S1-10 đã có):
 | `admin-users.html` — Quản lý tài khoản (S1-08: thêm, sửa, xóa, lọc, khóa / mở khóa) | `src/features/user-account/UserAccountPage.tsx` | Figma "S1-08: Quản Lý Tài Khoản" |
 | `admin-account-lock.html` — Khóa / Mở khóa tài khoản (S1-10) | `src/features/account-lock/AccountLockPage.tsx` | Figma "S1-10 : Khóa & Mở Khóa Tài Khoản" |
 
-API, kiểu dữ liệu và hộp thoại dùng chung nằm trong `src/features/account-lock/`.
+API, kiểu dữ liệu, `Modal` và hộp thoại khóa / mở khóa dùng chung nằm trong `src/features/account-lock/`; tìm kiếm, thêm và xoá nằm trong `src/features/user-management/`.
 
 ## Giao diện theo Figma (S1-10)
 

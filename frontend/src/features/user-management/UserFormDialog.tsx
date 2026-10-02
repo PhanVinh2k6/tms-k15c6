@@ -1,9 +1,9 @@
 import { useId, useState, type FormEvent } from 'react'
 import { AlertTriangle, LoaderCircle, Save, UserPlus } from 'lucide-react'
-import { ApiError } from './api'
-import { Modal } from './Modal'
-import { ROLE_LABEL, ROLE_ORDER } from './types'
-import type { Role, UserAccount } from './types'
+import { ApiError } from '../account-lock/api'
+import { Modal } from '../account-lock/Modal'
+import { ROLE_LABEL, ROLE_ORDER } from '../account-lock/types'
+import type { Role, UserAccount } from '../account-lock/types'
 import { emptyForm, formFromAccount, validateForm } from './validation'
 import type { FormErrors, FormValues } from './validation'
 
