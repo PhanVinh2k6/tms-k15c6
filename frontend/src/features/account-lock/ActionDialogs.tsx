@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { AlertTriangle, LoaderCircle, Lock, LockOpen, Trash2 } from 'lucide-react'
+import { AlertTriangle, LoaderCircle, Lock, LockOpen } from 'lucide-react'
 import { ApiError } from './api'
 import { Modal } from './Modal'
 import type { UserAccount } from './types'
@@ -161,60 +161,6 @@ export function UnlockDialog({ account, onConfirm, onClose }: UnlockDialogProps)
         <button type="button" data-autofocus className="acl-button acl-button-primary" disabled={submitting} onClick={submit}>
           {submitting ? <LoaderCircle size={16} className="acl-spin" aria-hidden="true" /> : <LockOpen size={16} aria-hidden="true" />}
           {submitting ? 'Đang mở khóa…' : 'Xác nhận mở khóa'}
-        </button>
-      </div>
-    </Modal>
-  )
-}
-
-type DeleteDialogProps = {
-  account: UserAccount
-  onConfirm: () => Promise<void>
-  onClose: () => void
-}
-
-export function DeleteDialog({ account, onConfirm, onClose }: DeleteDialogProps) {
-  const uid = useId()
-  const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError] = useState('')
-
-  const submit = async () => {
-    if (submitting) return
-    setSubmitting(true)
-    setFormError('')
-    try {
-      await onConfirm()
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Không xóa được tài khoản. Vui lòng thử lại.')
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <Modal titleId={`${uid}-title`} title="Xóa tài khoản" busy={submitting} onClose={onClose}>
-      <p className="acl-modal-lead">
-        Bạn sắp xóa hẳn tài khoản <strong>{account.fullName}</strong> ({account.email}).
-      </p>
-
-      <ul className="acl-notes">
-        <li>Thao tác này không khôi phục được.</li>
-        <li>Muốn người này tạm thời không dùng được hệ thống nhưng vẫn giữ dữ liệu, hãy chọn “Khóa” thay vì xóa.</li>
-      </ul>
-
-      {formError && (
-        <p className="acl-form-error" role="alert">
-          <AlertTriangle size={16} aria-hidden="true" />
-          <span>{formError}</span>
-        </p>
-      )}
-
-      <div className="acl-modal-actions">
-        <button type="button" data-autofocus className="acl-button acl-button-ghost" disabled={submitting} onClick={onClose}>
-          Huỷ
-        </button>
-        <button type="button" className="acl-button acl-button-danger" disabled={submitting} onClick={submit}>
-          {submitting ? <LoaderCircle size={16} className="acl-spin" aria-hidden="true" /> : <Trash2 size={16} aria-hidden="true" />}
-          {submitting ? 'Đang xóa…' : 'Xác nhận xóa'}
         </button>
       </div>
     </Modal>
