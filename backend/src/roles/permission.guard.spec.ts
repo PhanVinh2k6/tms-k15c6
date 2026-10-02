@@ -104,4 +104,26 @@ describe('PermissionGuard - S1-05 RBAC', () => {
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
+  it('INSTRUCTOR bị từ chối TUITION_WRITE với response 403 chuẩn', () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockReturnValue(Permission.TUITION_WRITE);
+
+    const context = createContext([Role.INSTRUCTOR]);
+
+     try {
+      guard.canActivate(context);
+      throw new Error('Expected ForbiddenException');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ForbiddenException);
+
+      const response = (error as ForbiddenException).getResponse();
+
+      expect(response).toEqual({
+        statusCode: 403,
+          code: 'FORBIDDEN',
+        message: 'Bạn không có quyền thực hiện thao tác này.',
+      });
+    }
+  });
 });
