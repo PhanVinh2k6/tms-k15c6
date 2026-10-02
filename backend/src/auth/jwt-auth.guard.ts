@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 
 declare module 'express-serve-static-core' {
   interface Request {
-    authUser?: { id: string; email: string; roles: string[] };
+    authUser?: { id: string; email: string; roles: string[]; jti: string };
   }
 }
 
@@ -17,7 +17,10 @@ export class JwtAuthGuard implements CanActivate {
     const header = request.header('authorization');
     if (!header?.startsWith('Bearer ')) throw new UnauthorizedException('Thiếu access token');
     const payload = this.authService.verifyAccessToken(header.slice(7));
-    request.authUser = { id: payload.sub, email: payload.email, roles: payload.roles };
+    if (!payload.jti || !this.authService.isSessionActive(payload)) {
+      throw new UnauthorizedException('Session không hợp lệ hoặc đã hết hạn');
+    }
+    request.authUser = { id: payload.sub, email: payload.email, roles: payload.roles, jti: payload.jti };
     return true;
   }
 }

@@ -16,7 +16,7 @@ Mặc định server chạy tại `http://localhost:3000`.
 
 Request: `{ "email": "admin@tms.local", "password": "Admin123!" }`
 
-Response thành công gồm `accessToken`, thông tin user không có password, và `redirectPath` theo role. Dùng token với `Authorization: Bearer <accessToken>` ở các API cần đăng nhập. `GET /auth/me` trả về user hiện tại.
+Response thành công gồm `accessToken`, `sessionId`, thông tin user không có password, và `redirectPath` theo role. Dùng token với `Authorization: Bearer <accessToken>` ở các API cần đăng nhập. `GET /auth/me` trả về user hiện tại.
 
 Tài khoản demo local: `admin@tms.local / Admin123!`, `user@tms.local / User123!`, `student@tms.local / Student123!`.
 
@@ -57,6 +57,19 @@ curl -H 'x-user-id: admin-1' -H 'x-user-roles: ADMIN' \
 - Sau 5 lần sai liên tiếp, tài khoản bị khóa 15 phút.
 - Đăng nhập đúng reset bộ đếm sai.
 - Không trả password hash.
+
+## Auth session
+
+Mỗi lần đăng nhập thành công tạo một session in-memory gắn với `jti` trong JWT:
+
+| Method | Endpoint | Mục đích |
+|---|---|---|
+| GET | `/auth/session` | Xem session hiện tại |
+| GET | `/auth/sessions` | Xem các session đang hoạt động của user |
+| DELETE | `/auth/session` | Logout và thu hồi session hiện tại |
+| POST | `/auth/logout` | Alias logout bằng POST |
+
+JWT đã bị thu hồi sẽ nhận `401 Session không hợp lệ hoặc đã hết hạn` ở các endpoint được bảo vệ. Session hiện là in-memory cho sprint; khi tích hợp PostgreSQL cần thay `SessionService` bằng repository lưu persistent.
 
 ## S1-09 role API
 

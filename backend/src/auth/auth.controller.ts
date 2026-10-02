@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -19,5 +19,34 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@Req() request: Request) {
     return { user: this.authService.getPublicUser(request.authUser!.id) };
+  }
+
+  @Get('session')
+  @UseGuards(JwtAuthGuard)
+  session(@Req() request: Request) {
+    const authUser = request.authUser!;
+    return { session: this.authService.getSession(authUser.jti, authUser.id) };
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  sessions(@Req() request: Request) {
+    return { sessions: this.authService.listSessions(request.authUser!.id) };
+  }
+
+  @Delete('session')
+  @UseGuards(JwtAuthGuard)
+  logout(@Req() request: Request) {
+    const authUser = request.authUser!;
+    this.authService.revokeSession(authUser.jti, authUser.id);
+    return { success: true };
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  logoutAlias(@Req() request: Request) {
+    const authUser = request.authUser!;
+    this.authService.revokeSession(authUser.jti, authUser.id);
+    return { success: true };
   }
 }

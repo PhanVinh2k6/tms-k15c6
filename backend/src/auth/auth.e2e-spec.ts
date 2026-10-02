@@ -72,4 +72,31 @@ describe('S1-01 email/password login', () => {
       .expect(200)
       .expect(({ body }) => expect(body.user.email).toBe('admin@tms.local'));
   });
+
+  it('creates, lists, inspects, and revokes the authenticated session', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'admin@tms.local', password: 'Admin123!' })
+      .expect(201);
+    const authorization = `Bearer ${login.body.accessToken}`;
+
+    await request(app.getHttpServer())
+      .get('/auth/session')
+      .set('Authorization', authorization)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.session.id).toBe(login.body.sessionId);
+        expect(body.session.userId).toBe('admin-1');
+        expect(body.session.revokedAt).toBeNull();
+      });
+
+    await request(app.getHttpServer())
+      .get('/auth/sessions')
+      .set('Authorization', authorization)
+      .expect(200)
+      .expect(({ body }) => expect(body.sessions.map((session: { id: string }) => session.id)).toContain(login.body.sessionId));
+
+    await request(app.getHttpServer()).delete('/auth/session').set('Authorization', authorization).expect(200, { success: true });
+    await request(app.getHttpServer()).get('/auth/me').set('Authorization', authorization).expect(401);
+  });
 });
