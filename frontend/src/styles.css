@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root { font-family: 'Inter', Arial, sans-serif; color: #24212d; background: #f7f7f8; font-synthesis: none; text-rendering: optimizeLegibility; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+
+.password-page { position: relative; min-height: 100vh; display: grid; place-items: center; padding: 40px 24px; overflow: hidden; background: #f8f8f9; }
+.password-page::before, .password-page::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+.password-page::before { width: 510px; height: 510px; top: -250px; left: -190px; background: radial-gradient(circle, rgba(110,61,245,.08), rgba(110,61,245,0) 72%); }
+.password-page::after { width: 420px; height: 420px; right: -200px; bottom: -210px; background: radial-gradient(circle, rgba(110,61,245,.06), rgba(110,61,245,0) 72%); }
+.password-card { position: relative; z-index: 1; width: min(852px, 100%); min-height: 500px; display: grid; grid-template-columns: 35.5% 64.5%; overflow: hidden; border: 1px solid #e3e2e7; border-radius: 4px; background: #fff; box-shadow: 0 16px 45px rgba(48, 32, 92, .1); }
+.password-intro { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 52px 26px; color: #fff; overflow: hidden; background: linear-gradient(152deg, #7848f5 0%, #5a28d2 55%, #4220b5 100%); }
+.password-intro::before, .password-intro::after { content: ''; position: absolute; border: 1px solid rgba(255,255,255,.13); border-radius: 50%; }
+.password-intro::before { width: 250px; height: 250px; top: -82px; right: -125px; }
+.password-intro::after { width: 180px; height: 180px; left: -98px; bottom: -90px; }
+.security-illustration { position: relative; width: 155px; height: 168px; margin-bottom: 26px; }
+.lock-ring { position: absolute; border: 1px solid rgba(255,255,255,.17); border-radius: 50%; }
+.lock-ring-large { width: 130px; height: 130px; top: 9px; left: 10px; background: radial-gradient(circle, rgba(255,255,255,.08), transparent 64%); }
+.lock-ring-small { width: 55px; height: 55px; right: 4px; bottom: 7px; border-color: rgba(255,255,255,.25); }
+.lock-shackle { position: absolute; width: 51px; height: 49px; top: 28px; left: 52px; border: 8px solid rgba(255,255,255,.87); border-bottom: 0; border-radius: 29px 29px 0 0; }
+.lock-body { position: absolute; top: 61px; left: 43px; width: 69px; height: 61px; display: grid; place-items: center; border: 5px solid rgba(255,255,255,.84); border-radius: 14px; color: #fff; background: linear-gradient(145deg, rgba(255,255,255,.17), rgba(255,255,255,.04)); box-shadow: 0 12px 25px rgba(20, 5, 83, .24); }
+.mini-key { position: absolute; right: 6px; bottom: 19px; width: 31px; height: 31px; display: grid; place-items: center; border: 2px solid rgba(255,255,255,.82); border-radius: 50%; color: #fff; background: #6740e7; transform: rotate(-35deg); }
+.intro-copy { position: relative; z-index: 1; text-align: center; }
+.intro-copy h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+.intro-copy p { max-width: 190px; margin: 10px auto 0; color: rgba(255,255,255,.66); font-size: 10px; line-height: 1.65; }
+.password-form-panel { padding: 59px 62px 48px 47px; background: #fff; }
+.form-heading { margin-bottom: 27px; }
+.form-kicker { margin: 0 0 8px; color: #9679e9; font-size: 8px; font-weight: 700; letter-spacing: .14em; }
+.form-heading h2 { margin: 0; color: #312d3b; font-size: 26px; font-weight: 600; letter-spacing: -.055em; }
+.form-subtitle { margin: 8px 0 0; color: #9996a2; font-size: 10px; line-height: 1.5; }
+.field-group { display: block; margin-bottom: 16px; }
+.field-group > span, .rules-title { display: block; margin-bottom: 7px; color: #615c6d; font-size: 10px; font-weight: 600; }
+.input-wrap { display: flex; align-items: center; height: 35px; border: 1px solid #e7e5eb; border-radius: 3px; background: #fff; transition: border-color .18s, box-shadow .18s; }
+.input-wrap:focus-within { border-color: #9e83ec; box-shadow: 0 0 0 3px rgba(109,61,245,.08); }
+.input-wrap input { width: 100%; height: 100%; padding: 0 11px; border: 0; outline: 0; color: #4b4655; background: transparent; font-size: 10px; }
+.input-wrap input::placeholder { color: #c1bec8; }
+.input-wrap button { display: grid; place-items: center; width: 34px; height: 100%; padding: 0; border: 0; color: #aaa6b1; background: transparent; }
+.input-wrap button:hover { color: #6d3df5; }
+.rules-block { margin: -1px 0 17px; }
+.rules-title { margin-bottom: 8px; color: #888391; font-size: 9px; font-weight: 500; }
+.rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.rule { display: inline-flex; align-items: center; gap: 5px; color: #aaa7b0; font-size: 9px; }
+.rule svg { color: #c9c6cf; }
+.rule-valid { color: #6b6b75; }.rule-valid svg { color: #39ad6e; }
+.submit-button { width: 100%; height: 35px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 2px; border: 0; border-radius: 3px; color: #fff; background: linear-gradient(90deg, #7d4cf5, #6a35e4); box-shadow: 0 7px 13px rgba(109,61,245,.16); font-size: 10px; font-weight: 600; transition: transform .18s, box-shadow .18s; }
+.submit-button:hover { transform: translateY(-1px); box-shadow: 0 10px 18px rgba(109,61,245,.23); }
+.success-message { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 10px; color: #29925a; font-size: 9px; }
+@media (max-width: 700px) { .password-page { padding: 25px 16px; }.password-card { grid-template-columns: 1fr; max-width: 430px; }.password-intro { min-height: 230px; padding: 26px; }.security-illustration { transform: scale(.72); margin: -14px 0 -12px; }.password-form-panel { padding: 32px 25px 32px; }.demo-label { top: 17px; left: 50%; font-size: 10px; transform: translate(-50%, 0); } }
+@media (max-width: 390px) { .password-form-panel { padding-right: 20px; padding-left: 20px; }.rules-grid { gap: 7px 5px; }.rule { font-size: 8px; } }
