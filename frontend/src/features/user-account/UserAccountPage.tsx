@@ -10,7 +10,6 @@ import {
   Plus,
   RefreshCw,
   Shield,
-  ShieldAlert,
   SquarePen,
   Trash2,
   UserX,
@@ -18,26 +17,32 @@ import {
   WifiOff,
   X,
 } from 'lucide-react'
-import { ApiError, createUser, deleteUser, getCurrentUserId, lockUser, unlockUser, updateUser } from '../account-lock/api'
-import { LockDialog, UnlockDialog } from '../account-lock/ActionDialogs'
+import { ApiError, createUser, deleteUser, getCurrentUserId, updateUser } from '../account-lock/api'
 import { formatDateTime } from '../account-lock/format'
 import { ROLE_LABEL, STATUS_LABEL } from '../account-lock/types'
-import type { HandoverWarning, UserAccount, UserStatus } from '../account-lock/types'
-import { DeleteUserDialog, UserFormDialog, UserSearchBar, toCreatePayload, toUpdatePayload, useUserSearch } from '../user-management'
-import type { FormValues } from '../user-management'
+import type { UserAccount, UserStatus } from '../account-lock/types'
+import {
+  DeleteUserDialog,
+  HandoverAlert,
+  LockDialog,
+  UnlockDialog,
+  UserFormDialog,
+  UserSearchBar,
+  staleNotice,
+  toCreatePayload,
+  toUpdatePayload,
+  useLockUnlock,
+  useUserSearch,
+} from '../user-management'
+import type { FormValues, Notice } from '../user-management'
 import './user-account.css'
 
 const PAGE_SIZE = 10
 
-/** Dữ liệu đã cũ so với server: báo rồi tải lại danh sách, không coi là lỗi của người dùng. */
-const STALE_CODES = new Set(['ALREADY_LOCKED', 'NOT_LOCKED', 'USER_NOT_FOUND'])
-
 /** Xóa bị từ chối vì quy tắc nghiệp vụ: báo cho người dùng, không phải dữ liệu cũ. */
 const DELETE_RULE_CODES = new Set(['CANNOT_DELETE_SELF', 'CANNOT_DELETE_LAST_ADMIN'])
 
-type Notice = { kind: 'success' | 'warning'; text: string }
 type LoadError = { kind: 'network' | 'denied' | 'other'; message: string }
-type HandoverNotice = { name: string; warning: HandoverWarning }
 
 function toLoadError(error: unknown): LoadError {
   if (error instanceof ApiError) {
@@ -157,29 +162,18 @@ export function UserAccountPage() {
   const { data, loading, filtering, setPage, clearFilters, reload } = search
   const loadError: LoadError | null = search.error ? toLoadError(search.error) : null
 
-  const [lockTarget, setLockTarget] = useState<UserAccount | null>(null)
-  const [unlockTarget, setUnlockTarget] = useState<UserAccount | null>(null)
   const [creating, setCreating] = useState(false)
   const [editTarget, setEditTarget] = useState<UserAccount | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserAccount | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
-  const [handover, setHandover] = useState<HandoverNotice | null>(null)
+  // Khoá / mở khoá (S1-10): hook useLockUnlock (src/features/user-management).
+  const lock = useLockUnlock({ onNotice: setNotice, reload })
 
   useEffect(() => {
     if (!notice) return
     const timer = window.setTimeout(() => setNotice(null), 6000)
     return () => window.clearTimeout(timer)
   }, [notice])
-
-  const staleNotice = (error: ApiError, name: string): Notice => {
-    if (error.code === 'ALREADY_LOCKED') {
-      return { kind: 'warning', text: `Tài khoản ${name} đã được khóa từ trước (có thể do người khác vừa khóa). Danh sách đã được tải lại.` }
-    }
-    if (error.code === 'NOT_LOCKED') {
-      return { kind: 'warning', text: `Tài khoản ${name} hiện không bị khóa (có thể do người khác vừa mở khóa). Danh sách đã được tải lại.` }
-    }
-    return { kind: 'warning', text: `Không còn tìm thấy tài khoản ${name}. Danh sách đã được tải lại.` }
-  }
 
   const confirmCreate = async (values: FormValues) => {
     const created = await createUser(toCreatePayload(values))
@@ -232,45 +226,6 @@ export function UserAccountPage() {
       if (error instanceof ApiError && DELETE_RULE_CODES.has(error.code)) {
         setDeleteTarget(null)
         setNotice({ kind: 'warning', text: error.message })
-        return
-      }
-      throw error
-    }
-  }
-
-  const confirmLock = async (reason: string) => {
-    const target = lockTarget
-    if (!target) return
-    try {
-      const result = await lockUser(target.id, reason)
-      setLockTarget(null)
-      setNotice({ kind: 'success', text: `Đã khóa tài khoản ${target.fullName}.` })
-      setHandover(result.handoverWarning ? { name: target.fullName, warning: result.handoverWarning } : null)
-      reload()
-    } catch (error) {
-      if (error instanceof ApiError && STALE_CODES.has(error.code)) {
-        setLockTarget(null)
-        setNotice(staleNotice(error, target.fullName))
-        reload()
-        return
-      }
-      throw error
-    }
-  }
-
-  const confirmUnlock = async () => {
-    const target = unlockTarget
-    if (!target) return
-    try {
-      await unlockUser(target.id)
-      setUnlockTarget(null)
-      setNotice({ kind: 'success', text: `Đã mở khóa tài khoản ${target.fullName}.` })
-      reload()
-    } catch (error) {
-      if (error instanceof ApiError && STALE_CODES.has(error.code)) {
-        setUnlockTarget(null)
-        setNotice(staleNotice(error, target.fullName))
-        reload()
         return
       }
       throw error
@@ -330,25 +285,7 @@ export function UserAccountPage() {
           )}
         </div>
 
-        {handover && (
-          <section className="acl-handover" role="alert" aria-label="Cảnh báo bàn giao lớp học">
-            <ShieldAlert size={22} aria-hidden="true" />
-            <div>
-              <strong>Cần bàn giao: {handover.name}</strong>
-              <p>{handover.warning.message}</p>
-              {handover.warning.classes.length > 0 && (
-                <ul>
-                  {handover.warning.classes.map((item) => (
-                    <li key={item.id}>{item.name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <button type="button" className="acl-icon-button" aria-label="Đã đọc, ẩn cảnh báo bàn giao" onClick={() => setHandover(null)}>
-              <X size={18} aria-hidden="true" />
-            </button>
-          </section>
-        )}
+        <HandoverAlert handover={lock.handover} onDismiss={lock.dismissHandover} />
 
         <section className="acl-card" aria-label="Danh sách tài khoản">
           <UserSearchBar
@@ -439,8 +376,8 @@ export function UserAccountPage() {
                             account={account}
                             isSelf={account.id === currentUserId}
                             onEdit={setEditTarget}
-                            onLock={setLockTarget}
-                            onUnlock={setUnlockTarget}
+                            onLock={lock.startLock}
+                            onUnlock={lock.startUnlock}
                             onDelete={setDeleteTarget}
                           />
                         </td>
@@ -467,8 +404,8 @@ export function UserAccountPage() {
                             account={account}
                             isSelf={account.id === currentUserId}
                             onEdit={setEditTarget}
-                            onLock={setLockTarget}
-                            onUnlock={setUnlockTarget}
+                            onLock={lock.startLock}
+                            onUnlock={lock.startUnlock}
                             onDelete={setDeleteTarget}
                           />
                       </div>
@@ -512,8 +449,8 @@ export function UserAccountPage() {
         </section>
       </main>
 
-      {lockTarget && <LockDialog account={lockTarget} onConfirm={confirmLock} onClose={() => setLockTarget(null)} />}
-      {unlockTarget && <UnlockDialog account={unlockTarget} onConfirm={confirmUnlock} onClose={() => setUnlockTarget(null)} />}
+      {lock.lockTarget && <LockDialog account={lock.lockTarget} onConfirm={lock.confirmLock} onClose={lock.cancelLock} />}
+      {lock.unlockTarget && <UnlockDialog account={lock.unlockTarget} onConfirm={lock.confirmUnlock} onClose={lock.cancelUnlock} />}
       {creating && <UserFormDialog onSubmit={confirmCreate} onClose={() => setCreating(false)} />}
       {editTarget && <UserFormDialog account={editTarget} onSubmit={confirmEdit} onClose={() => setEditTarget(null)} />}
       {deleteTarget && <DeleteUserDialog account={deleteTarget} onConfirm={confirmDelete} onClose={() => setDeleteTarget(null)} />}

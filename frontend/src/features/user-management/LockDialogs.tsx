@@ -1,9 +1,11 @@
 import { useId, useState, type FormEvent } from 'react'
 import { AlertTriangle, LoaderCircle, Lock, LockOpen } from 'lucide-react'
-import { ApiError } from './api'
-import { Modal } from './Modal'
-import type { UserAccount } from './types'
-import { formatDateTime } from './format'
+import { ApiError } from '../account-lock/api'
+import { Modal } from '../account-lock/Modal'
+import type { UserAccount } from '../account-lock/types'
+import { formatDateTime } from '../account-lock/format'
+
+/** Hộp thoại khoá (bắt buộc lý do) và mở khoá tài khoản (S1-10). Gọi API qua hook useLockUnlock. */
 
 export const LOCK_REASON_MIN = 3
 export const LOCK_REASON_MAX = 500

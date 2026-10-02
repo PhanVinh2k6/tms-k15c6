@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -12,20 +12,19 @@ import {
   RefreshCw,
   Search,
   Shield,
-  ShieldAlert,
   UserX,
   WifiOff,
   X,
 } from 'lucide-react'
-import { ApiError, getCurrentUserId, listUsers, lockUser, unlockUser } from './api'
-import { LockDialog, UnlockDialog } from './ActionDialogs'
+import { ApiError, getCurrentUserId } from './api'
 import { formatDateTime } from './format'
 import { ROLE_LABEL, ROLE_ORDER } from './types'
-import type { HandoverWarning, RoleFilter, StatusFilter, UserAccount, UserPage, UserStatus } from './types'
+import type { RoleFilter, StatusFilter, UserAccount, UserStatus } from './types'
+import { HandoverAlert, LockDialog, UnlockDialog, useLockUnlock, useUserSearch } from '../user-management'
+import type { Notice } from '../user-management'
 import './account-lock.css'
 
 const PAGE_SIZE = 10
-const SEARCH_DEBOUNCE_MS = 350
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: '', label: 'Tất cả trạng thái' },
@@ -41,12 +40,7 @@ const STATUS_TEXT: Record<UserStatus, string> = {
   PENDING_ACTIVATION: 'Chờ kích hoạt',
 }
 
-/** Dữ liệu đã cũ so với server: báo rồi tải lại danh sách, không coi là lỗi của người dùng. */
-const STALE_CODES = new Set(['ALREADY_LOCKED', 'NOT_LOCKED', 'USER_NOT_FOUND'])
-
-type Notice = { kind: 'success' | 'warning'; text: string }
 type LoadError = { kind: 'network' | 'denied' | 'other'; message: string }
-type HandoverNotice = { name: string; warning: HandoverWarning }
 
 function toLoadError(error: unknown): LoadError {
   if (error instanceof ApiError) {
@@ -146,58 +140,13 @@ function RowAction({ account, isSelf, onLock, onUnlock }: RowActionProps) {
 export function AccountLockPage() {
   const currentUserId = getCurrentUserId()
 
-  const [searchInput, setSearchInput] = useState('')
-  const [q, setQ] = useState('')
-  const [status, setStatus] = useState<StatusFilter>('')
-  const [role, setRole] = useState<RoleFilter>('')
-  const [page, setPage] = useState(1)
-  const [reloadKey, setReloadKey] = useState(0)
+  // Tìm kiếm, lọc, phân trang: hook useUserSearch; khoá / mở khoá: hook useLockUnlock (src/features/user-management).
+  const search = useUserSearch(PAGE_SIZE)
+  const { data, loading, filtering, setPage, clearFilters, reload } = search
+  const loadError: LoadError | null = search.error ? toLoadError(search.error) : null
 
-  const [data, setData] = useState<UserPage | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<LoadError | null>(null)
-
-  const [lockTarget, setLockTarget] = useState<UserAccount | null>(null)
-  const [unlockTarget, setUnlockTarget] = useState<UserAccount | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
-  const [handover, setHandover] = useState<HandoverNotice | null>(null)
-
-  const reload = useCallback(() => setReloadKey((key) => key + 1), [])
-
-  // Gõ tìm kiếm: đợi người dùng ngừng gõ rồi mới gọi API và quay về trang 1.
-  const appliedQuery = useRef('')
-  useEffect(() => {
-    const next = searchInput.trim()
-    if (next === appliedQuery.current) return
-    const timer = window.setTimeout(() => {
-      appliedQuery.current = next
-      setQ(next)
-      setPage(1)
-    }, SEARCH_DEBOUNCE_MS)
-    return () => window.clearTimeout(timer)
-  }, [searchInput])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    setLoading(true)
-    setLoadError(null)
-    listUsers({ q, status, role, page, pageSize: PAGE_SIZE }, controller.signal)
-      .then((result) => {
-        if (controller.signal.aborted) return
-        if (result.totalPages > 0 && page > result.totalPages) {
-          setPage(result.totalPages) // trang hiện tại không còn (vừa đổi bộ lọc / dữ liệu thay đổi)
-          return
-        }
-        setData(result)
-        setLoading(false)
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        setLoadError(toLoadError(error))
-        setLoading(false)
-      })
-    return () => controller.abort()
-  }, [q, status, role, page, reloadKey])
+  const lock = useLockUnlock({ onNotice: setNotice, reload })
 
   useEffect(() => {
     if (!notice) return
@@ -205,66 +154,7 @@ export function AccountLockPage() {
     return () => window.clearTimeout(timer)
   }, [notice])
 
-  const staleNotice = (error: ApiError, name: string): Notice => {
-    if (error.code === 'ALREADY_LOCKED') {
-      return { kind: 'warning', text: `Tài khoản ${name} đã được khóa từ trước (có thể do người khác vừa khóa). Danh sách đã được tải lại.` }
-    }
-    if (error.code === 'NOT_LOCKED') {
-      return { kind: 'warning', text: `Tài khoản ${name} hiện không bị khóa (có thể do người khác vừa mở khóa). Danh sách đã được tải lại.` }
-    }
-    return { kind: 'warning', text: `Không còn tìm thấy tài khoản ${name}. Danh sách đã được tải lại.` }
-  }
-
-  const clearFilters = () => {
-    setSearchInput('')
-    appliedQuery.current = ''
-    setQ('')
-    setStatus('')
-    setRole('')
-    setPage(1)
-  }
-
-  const confirmLock = async (reason: string) => {
-    const target = lockTarget
-    if (!target) return
-    try {
-      const result = await lockUser(target.id, reason)
-      setLockTarget(null)
-      setNotice({ kind: 'success', text: `Đã khóa tài khoản ${target.fullName}.` })
-      setHandover(result.handoverWarning ? { name: target.fullName, warning: result.handoverWarning } : null)
-      reload()
-    } catch (error) {
-      if (error instanceof ApiError && STALE_CODES.has(error.code)) {
-        setLockTarget(null)
-        setNotice(staleNotice(error, target.fullName))
-        reload()
-        return
-      }
-      throw error
-    }
-  }
-
-  const confirmUnlock = async () => {
-    const target = unlockTarget
-    if (!target) return
-    try {
-      await unlockUser(target.id)
-      setUnlockTarget(null)
-      setNotice({ kind: 'success', text: `Đã mở khóa tài khoản ${target.fullName}.` })
-      reload()
-    } catch (error) {
-      if (error instanceof ApiError && STALE_CODES.has(error.code)) {
-        setUnlockTarget(null)
-        setNotice(staleNotice(error, target.fullName))
-        reload()
-        return
-      }
-      throw error
-    }
-  }
-
   const items = data?.items ?? []
-  const filtering = q !== '' || status !== '' || role !== ''
   const firstShown = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0
   const lastShown = data ? firstShown + items.length - 1 : 0
   const tableData = !loadError && data !== null && items.length > 0 ? data : null
@@ -309,25 +199,7 @@ export function AccountLockPage() {
           )}
         </div>
 
-        {handover && (
-          <section className="acl-handover" role="alert" aria-label="Cảnh báo bàn giao lớp học">
-            <ShieldAlert size={22} aria-hidden="true" />
-            <div>
-              <strong>Cần bàn giao: {handover.name}</strong>
-              <p>{handover.warning.message}</p>
-              {handover.warning.classes.length > 0 && (
-                <ul>
-                  {handover.warning.classes.map((item) => (
-                    <li key={item.id}>{item.name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <button type="button" className="acl-icon-button" aria-label="Đã đọc, ẩn cảnh báo bàn giao" onClick={() => setHandover(null)}>
-              <X size={18} aria-hidden="true" />
-            </button>
-          </section>
-        )}
+        <HandoverAlert handover={lock.handover} onDismiss={lock.dismissHandover} />
 
         <section className="acl-card" aria-label="Danh sách tài khoản">
           <div className="acl-toolbar">
@@ -335,23 +207,20 @@ export function AccountLockPage() {
               <Search size={16} aria-hidden="true" />
               <input
                 type="search"
-                value={searchInput}
+                value={search.searchInput}
                 maxLength={100}
                 placeholder="Tìm kiếm tài khoản, email..."
                 aria-label="Tìm tài khoản theo tên, email hoặc số điện thoại"
-                onChange={(event) => setSearchInput(event.target.value)}
+                onChange={(event) => search.setSearchInput(event.target.value)}
               />
             </div>
             <div className="acl-filter-group">
               <Funnel className="acl-filter-icon" size={34} strokeWidth={1.4} aria-hidden="true" />
               <span className="acl-select-box">
                 <select
-                  value={status}
+                  value={search.status}
                   aria-label="Lọc theo trạng thái"
-                  onChange={(event) => {
-                    setStatus(event.target.value as StatusFilter)
-                    setPage(1)
-                  }}
+                  onChange={(event) => search.setStatus(event.target.value as StatusFilter)}
                 >
                   {STATUS_FILTERS.map((filter) => (
                     <option key={filter.label} value={filter.value}>
@@ -363,12 +232,9 @@ export function AccountLockPage() {
               </span>
               <span className="acl-select-box">
                 <select
-                  value={role}
+                  value={search.role}
                   aria-label="Lọc theo vai trò"
-                  onChange={(event) => {
-                    setRole(event.target.value as RoleFilter)
-                    setPage(1)
-                  }}
+                  onChange={(event) => search.setRole(event.target.value as RoleFilter)}
                 >
                   <option value="">Tất cả vai trò</option>
                   {ROLE_ORDER.map((item) => (
@@ -456,7 +322,7 @@ export function AccountLockPage() {
                           <SessionInfo status={account.status} />
                         </td>
                         <td className="acl-col-action">
-                          <RowAction account={account} isSelf={account.id === currentUserId} onLock={setLockTarget} onUnlock={setUnlockTarget} />
+                          <RowAction account={account} isSelf={account.id === currentUserId} onLock={lock.startLock} onUnlock={lock.startUnlock} />
                         </td>
                       </tr>
                     ))}
@@ -477,7 +343,7 @@ export function AccountLockPage() {
                       <LockedInfo account={account} />
                       <div className="acl-account-card-action">
                         <SessionInfo status={account.status} />
-                        <RowAction account={account} isSelf={account.id === currentUserId} onLock={setLockTarget} onUnlock={setUnlockTarget} />
+                        <RowAction account={account} isSelf={account.id === currentUserId} onLock={lock.startLock} onUnlock={lock.startUnlock} />
                       </div>
                     </li>
                   ))}
@@ -519,8 +385,8 @@ export function AccountLockPage() {
         </section>
       </main>
 
-      {lockTarget && <LockDialog account={lockTarget} onConfirm={confirmLock} onClose={() => setLockTarget(null)} />}
-      {unlockTarget && <UnlockDialog account={unlockTarget} onConfirm={confirmUnlock} onClose={() => setUnlockTarget(null)} />}
+      {lock.lockTarget && <LockDialog account={lock.lockTarget} onConfirm={lock.confirmLock} onClose={lock.cancelLock} />}
+      {lock.unlockTarget && <UnlockDialog account={lock.unlockTarget} onConfirm={lock.confirmUnlock} onClose={lock.cancelUnlock} />}
     </div>
   )
 }
