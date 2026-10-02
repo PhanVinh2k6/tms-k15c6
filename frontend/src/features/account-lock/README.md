@@ -81,7 +81,7 @@ Khác với thiết kế (giữ lại vì là chức năng S1-10 đã có):
 | `admin-users.html` — Quản lý tài khoản (S1-08: thêm, sửa, xóa, lọc, khóa / mở khóa) | `src/features/user-account/UserAccountPage.tsx` | Figma "S1-08: Quản Lý Tài Khoản" |
 | `admin-account-lock.html` — Khóa / Mở khóa tài khoản (S1-10) | `src/features/account-lock/AccountLockPage.tsx` | Figma "S1-10 : Khóa & Mở Khóa Tài Khoản" |
 
-API, kiểu dữ liệu, `Modal` và hộp thoại khóa / mở khóa dùng chung nằm trong `src/features/account-lock/`; tìm kiếm, thêm và xoá nằm trong `src/features/user-management/`.
+API, kiểu dữ liệu và `Modal` dùng chung nằm trong `src/features/account-lock/`; tìm kiếm, thêm, xoá, hộp thoại và luồng khóa / mở khóa nằm trong `src/features/user-management/`.
 
 ## Giao diện theo Figma (S1-10)
 
