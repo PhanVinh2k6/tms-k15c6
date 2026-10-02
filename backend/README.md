@@ -12,6 +12,8 @@ npm run start:dev
 
 Mặc định server chạy tại `http://localhost:3000`.
 
+Mở `http://localhost:3000/` để kiểm tra trạng thái backend. Endpoint này trả về `status: "ok"` và danh sách API chính.
+
 ### `POST /auth/login`
 
 Request: `{ "email": "admin@tms.local", "password": "Admin123!" }`
