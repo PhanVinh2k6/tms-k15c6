@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -66,7 +67,11 @@ export class UsersService {
     };
     this.users.set(user.id, user);
 
-    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+    // Ưu tiên FRONTEND_ORIGIN, vẫn nhận FRONTEND_URL (tên cũ); 5173 là cổng mặc định của frontend (Vite).
+    const frontendUrl = (process.env.FRONTEND_ORIGIN ?? process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(
+      /\/+$/,
+      '',
+    );
     try {
       await this.mailService.sendAccountActivation({
         to: user.email,
@@ -129,6 +134,51 @@ export class UsersService {
     return this.toResponse(user);
   }
 
+  // ---------------------------------------------------------------------------
+  // Vai trò (S1-09). RolesService gọi vào đây để S1-08 và S1-09 dùng chung MỘT kho dữ liệu:
+  // user tạo ở S1-08 gán được vai trò ở S1-09, và vai trò gán ở S1-09 hiện ngay trong S1-08.
+  // ---------------------------------------------------------------------------
+
+  getRoles(id: string): Role[] {
+    return [...this.getUser(id).roles].sort();
+  }
+
+  addRole(id: string, role: Role): Role[] {
+    const user = this.getUser(id);
+    user.roles.add(role);
+    user.updatedAt = new Date();
+    return this.getRoles(id);
+  }
+
+  removeRole(id: string, role: Role): Role[] {
+    const user = this.getUser(id);
+    user.roles.delete(role);
+    user.updatedAt = new Date();
+    return this.getRoles(id);
+  }
+
+  /**
+   * Xoá hẳn tài khoản (không khôi phục được). Không cho tự xoá mình, và không xoá Quản trị hệ thống
+   * cuối cùng để hệ thống luôn còn người quản lý. Muốn giữ lại dữ liệu thì dùng khoá tài khoản (S1-10).
+   */
+  remove(id: string, actorId: string): { id: string } {
+    const user = this.getUser(id);
+    if (user.id === actorId) {
+      throw new ForbiddenException({ code: 'CANNOT_DELETE_SELF', message: 'Bạn không thể tự xoá tài khoản của mình.' });
+    }
+    if (user.roles.has(Role.ADMIN)) {
+      const admins = [...this.users.values()].filter((item) => item.roles.has(Role.ADMIN));
+      if (admins.length <= 1) {
+        throw new ConflictException({
+          code: 'CANNOT_DELETE_LAST_ADMIN',
+          message: 'Không thể xoá Quản trị hệ thống cuối cùng.',
+        });
+      }
+    }
+    this.users.delete(id);
+    return { id };
+  }
+
   /**
    * Đổi mật khẩu của chính user hiện tại. sessionVersion được tăng để auth layer
    * vô hiệu hóa token/phiên cũ sau khi tích hợp S1-01/S1-02.
@@ -180,6 +230,53 @@ export class UsersService {
     return user;
   }
 
+  // ---------------------------------------------------------------------------
+  // Khoá / mở khoá tài khoản (S1-10).
+  // Khoá = đổi status sang LOCKED + tăng sessionVersion (dùng chung bộ đếm với đổi mật khẩu S1-04).
+  // Khi tích hợp Auth (S1-01/S1-02), Auth phải: chỉ cho đăng nhập khi status = ACTIVE, và chỉ chấp nhận
+  // token mang đúng sessionVersion hiện tại. Lúc đó khoá xong sẽ chặn cả đăng nhập lẫn phiên đang mở,
+  // và phiên cũ không sống lại sau khi mở khoá. Hiện chưa có Auth nên ActorMiddleware chưa chặn gì.
+  // ---------------------------------------------------------------------------
+
+  lock(id: string, reason: string, actorId: string): UserResponse {
+    const user = this.getUser(id);
+    if (user.id === actorId) {
+      throw new BadRequestException({
+        code: 'CANNOT_LOCK_SELF',
+        message: 'Không thể tự khoá tài khoản của chính mình',
+      });
+    }
+    if (user.status === UserStatus.LOCKED) {
+      throw new ConflictException({ code: 'ALREADY_LOCKED', message: 'Tài khoản này đã bị khoá' });
+    }
+
+    const now = new Date();
+    user.statusBeforeLock = user.status;
+    user.status = UserStatus.LOCKED;
+    user.lockedReason = reason;
+    user.lockedAt = now;
+    user.lockedById = actorId;
+    user.sessionVersion += 1; // thu hồi mọi phiên đang mở
+    user.updatedAt = now;
+    return this.toResponse(user);
+  }
+
+  unlock(id: string): UserResponse {
+    const user = this.getUser(id);
+    if (user.status !== UserStatus.LOCKED) {
+      throw new ConflictException({ code: 'NOT_LOCKED', message: 'Tài khoản này không bị khoá' });
+    }
+
+    // Trả về đúng trạng thái trước khi khoá: tài khoản chưa kích hoạt vẫn phải kích hoạt, không được "nhảy cóc".
+    user.status = user.statusBeforeLock ?? UserStatus.ACTIVE;
+    user.statusBeforeLock = null;
+    user.lockedReason = null;
+    user.lockedAt = null;
+    user.lockedById = null;
+    user.updatedAt = new Date();
+    return this.toResponse(user);
+  }
+
   private toResponse(user: UserAccount): UserResponse {
     return {
       id: user.id,
@@ -190,6 +287,8 @@ export class UsersService {
       status: user.status,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
+      lockedReason: user.lockedReason ?? null,
+      lockedAt: user.lockedAt ? user.lockedAt.toISOString() : null,
     };
   }
 
