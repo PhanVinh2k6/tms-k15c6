@@ -14,6 +14,17 @@ describe('S1-01 email/password login', () => {
 
   afterAll(async () => app.close());
 
+  it('returns API status from the root endpoint', async () => {
+    await request(app.getHttpServer())
+      .get('/')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.name).toBe('TMS Backend API');
+        expect(body.status).toBe('ok');
+        expect(body.endpoints.login).toBe('POST /auth/login');
+      });
+  });
+
   it('logs in with valid credentials and returns the role-specific home path', async () => {
     await request(app.getHttpServer())
       .post('/auth/login')
