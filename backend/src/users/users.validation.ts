@@ -235,3 +235,43 @@ export function parseLockInput(body: unknown): LockUserInput {
   }
   return { reason };
 }
+
+
+export interface PasswordResetRequestInput {
+  email: string;
+}
+
+export interface PasswordResetConfirmInput {
+  token: string;
+  newPassword: string;
+}
+
+export function parsePasswordResetRequest(body: unknown): PasswordResetRequestInput {
+  const data = asObject(body);
+  const errors: FieldErrors = {};
+  for (const key of Object.keys(data)) {
+    if (key !== 'email') errors[key] = 'Trường này không được hỗ trợ';
+  }
+  const email = readEmail(data.email, errors);
+  if (Object.keys(errors).length > 0) fail(errors);
+  return { email: email! };
+}
+
+export function parsePasswordResetConfirm(body: unknown): PasswordResetConfirmInput {
+  const data = asObject(body);
+  const errors: FieldErrors = {};
+  for (const key of Object.keys(data)) {
+    if (key !== 'token' && key !== 'newPassword') errors[key] = 'Trường này không được hỗ trợ';
+  }
+  const token = typeof data.token === 'string' ? data.token.trim() : '';
+  if (!token || token.length > 500) errors.token = 'Token đặt lại mật khẩu không hợp lệ';
+  const newPassword = data.newPassword;
+  if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) {
+    errors.newPassword = 'Mật khẩu mới phải từ 8 đến 128 ký tự';
+  } else {
+    if (!/\p{L}/u.test(newPassword)) errors.newPassword = 'Mật khẩu mới phải có ít nhất một chữ cái';
+    if (!/\p{N}/u.test(newPassword)) errors.newPassword = `${errors.newPassword ? `${errors.newPassword}; ` : ''}Mật khẩu mới phải có ít nhất một chữ số`;
+  }
+  if (Object.keys(errors).length > 0) fail(errors);
+  return { token, newPassword: newPassword as string };
+}

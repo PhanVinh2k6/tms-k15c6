@@ -20,6 +20,9 @@ export interface UserAccount {
   mustChangePassword: boolean;
   activationTokenHash: string | null;
   activationExpiresAt: Date | null;
+  /** Token đặt lại mật khẩu chỉ lưu dưới dạng hash. */
+  passwordResetTokenHash: string | null;
+  passwordResetExpiresAt: Date | null;
   /** Tăng sau khi đổi mật khẩu; auth layer phải đưa version vào token và so khớp khi xác thực. */
   sessionVersion: number;
   createdAt: Date;
