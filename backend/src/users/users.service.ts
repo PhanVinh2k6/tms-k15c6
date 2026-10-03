@@ -71,8 +71,6 @@ export class UsersService {
       activationExpiresAt: expiresAt,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
-      resetTokenHash: null,
-      resetTokenExpiresAt: null,
       sessionVersion: 0,
       createdAt: now,
       updatedAt: now,
@@ -235,11 +233,9 @@ export class UsersService {
 
       user.passwordResetTokenHash = tokenHash;
       user.passwordResetExpiresAt = expiresAt;
-      user.resetTokenHash = tokenHash;
-      user.resetTokenExpiresAt = expiresAt;
       this.lastPasswordResetToken = token;
 
-      const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+      const frontendUrl = (process.env.FRONTEND_ORIGIN ?? process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
       try {
         await this.mailService.sendPasswordReset({
           to: user.email,
@@ -299,8 +295,8 @@ export class UsersService {
     const now = Date.now();
 
     for (const user of this.users.values()) {
-      const expiresAt = user.passwordResetExpiresAt ?? user.resetTokenExpiresAt ?? null;
-      const hashedToken = user.passwordResetTokenHash ?? user.resetTokenHash ?? null;
+      const expiresAt = user.passwordResetExpiresAt;
+      const hashedToken = user.passwordResetTokenHash;
       if (hashedToken && expiresAt && expiresAt.getTime() > now && hashedToken === tokenHash) {
         return user;
       }
@@ -312,8 +308,6 @@ export class UsersService {
   private clearPasswordResetToken(user: UserAccount): void {
     user.passwordResetTokenHash = null;
     user.passwordResetExpiresAt = null;
-    user.resetTokenHash = null;
-    user.resetTokenExpiresAt = null;
   }
 
   private assertEmailAvailable(email: string): void {
@@ -413,8 +407,6 @@ export class UsersService {
       activationExpiresAt: null,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
-      resetTokenHash: null,
-      resetTokenExpiresAt: null,
       sessionVersion: 0,
       createdAt: now,
       updatedAt: now,

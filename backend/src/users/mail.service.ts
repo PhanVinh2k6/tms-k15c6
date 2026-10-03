@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+export interface PasswordResetEmail {
+  to: string;
+  fullName: string;
+  resetLink: string;
+  expiresAt: Date;
+}
+
 export interface ActivationEmail {
   to: string;
   fullName: string;
@@ -14,6 +21,9 @@ export interface ActivationEmail {
  */
 export abstract class MailService {
   abstract sendAccountActivation(email: ActivationEmail): Promise<void>;
+
+  // Có implementation mặc định để các fake mail service cũ vẫn tương thích.
+  async sendPasswordReset(_email: PasswordResetEmail): Promise<void> {}
 }
 
 /**
@@ -23,6 +33,12 @@ export abstract class MailService {
 @Injectable()
 export class ConsoleMailService extends MailService {
   private readonly logger = new Logger('MailService');
+
+  async sendPasswordReset(email: PasswordResetEmail): Promise<void> {
+    this.logger.log(
+      [`[DEV] Email đặt lại mật khẩu gửi tới ${email.to} (${email.fullName})`, `  Link đặt lại: ${email.resetLink}`, `  Hết hạn lúc: ${email.expiresAt.toISOString()}`].join('\n'),
+    );
+  }
 
   async sendAccountActivation(email: ActivationEmail): Promise<void> {
     this.logger.log(
