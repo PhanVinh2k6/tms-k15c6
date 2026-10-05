@@ -1,37 +1,28 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Role, User } from './role.types';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { UsersService } from '../users/users.service';
+import { Role } from './role.types';
 
+/**
+ * Quản lý vai trò (S1-09). Không còn kho người dùng riêng: mọi thao tác đi qua UsersService (S1-08),
+ * nên người dùng nào tạo được ở S1-08 thì gán / thu hồi vai trò được ở S1-09.
+ * Người dùng không tồn tại → UsersService ném 404 USER_NOT_FOUND.
+ */
 @Injectable()
 export class RolesService {
-  private readonly users = new Map<string, User>([
-    ['admin-1', { id: 'admin-1', email: 'admin@tms.local', roles: new Set([Role.ADMIN]) }],
-    ['user-1', { id: 'user-1', email: 'user@tms.local', roles: new Set([Role.INSTRUCTOR]) }],
-  ]);
+  constructor(private readonly usersService: UsersService) {}
 
   listRoles(userId: string): Role[] {
-    return [...this.getUser(userId).roles].sort();
+    return this.usersService.getRoles(userId);
   }
 
   assignRole(userId: string, role: Role): Role[] {
-    const user = this.getUser(userId);
-    user.roles.add(role);
-    return this.listRoles(userId);
+    return this.usersService.addRole(userId, role);
   }
 
   revokeRole(actorId: string, userId: string, role: Role): Role[] {
-    const user = this.getUser(userId);
     if (actorId === userId && role === Role.ADMIN) {
       throw new BadRequestException('An administrator cannot revoke their own ADMIN role');
     }
-    user.roles.delete(role);
-    return this.listRoles(userId);
-  }
-
-  private getUser(userId: string): User {
-    const user = this.users.get(userId);
-    if (!user) {
-      throw new NotFoundException(`User ${userId} not found`);
-    }
-    return user;
+    return this.usersService.removeRole(userId, role);
   }
 }
