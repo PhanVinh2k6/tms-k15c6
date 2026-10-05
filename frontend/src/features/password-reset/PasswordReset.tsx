@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./password-reset.css";
+import { confirmPasswordReset, PasswordResetApiError, requestPasswordReset } from "./api";
 import type { FormEvent } from "react";
 import {
   ArrowLeft,
@@ -77,11 +78,15 @@ export default function PasswordReset() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetError, setResetError] = useState("");
   const [isPasswordUpdated, setIsPasswordUpdated] = useState(false);
+  const [resetToken, setResetToken] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
+  // Mở từ liên kết trong email: /password-reset.html?token=... -> vào thẳng bước đặt mật khẩu mới.
   useEffect(() => {
-    const demoToken = new URLSearchParams(window.location.search).get("token");
-    if (demoToken === "demo") {
-      setSubmittedEmail("email mẫu");
+    const token = new URLSearchParams(window.location.search).get("token")?.trim();
+    if (token) {
+      setResetToken(token);
+      setSubmittedEmail("email của bạn");
       setIsSent(true);
       setIsResetScreen(true);
     }
@@ -107,7 +112,7 @@ export default function PasswordReset() {
     return () => window.clearInterval(countdown);
   }, [isSent]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedEmail = email.trim();
 
@@ -123,7 +128,8 @@ export default function PasswordReset() {
 
     setError("");
     setIsSending(true);
-    window.setTimeout(() => {
+    try {
+      await requestPasswordReset(normalizedEmail);
       setSubmittedEmail(normalizedEmail);
       setIsResetScreen(false);
       setIsPasswordUpdated(false);
@@ -134,27 +140,38 @@ export default function PasswordReset() {
       setResendCooldown(0);
       setResendNotice("");
       setIsSent(true);
+    } catch (caught) {
+      setError(caught instanceof PasswordResetApiError ? caught.message : "Đã có lỗi xảy ra. Vui lòng thử lại.");
+    } finally {
       setIsSending(false);
-    }, 650);
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (isResending || resendCooldown > 0) return;
 
     setIsResending(true);
     setResendNotice("");
-    window.setTimeout(() => {
+    try {
+      await requestPasswordReset(submittedEmail);
       setRemainingSeconds(LINK_LIFETIME_SECONDS);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
       setResendNotice("Đã gửi lại liên kết mới đến hộp thư của bạn.");
+    } catch (caught) {
+      setResendNotice(caught instanceof PasswordResetApiError ? caught.message : "Chưa gửi lại được liên kết. Vui lòng thử lại.");
+    } finally {
       setIsResending(false);
-    }, 650);
+    }
   };
 
-  const handlePasswordReset = (event: FormEvent<HTMLFormElement>) => {
+  const handlePasswordReset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (newPassword.length < 8) {
       setResetError("Mật khẩu mới cần có ít nhất 8 ký tự.");
+      return;
+    }
+    if (!/\p{L}/u.test(newPassword) || !/\p{N}/u.test(newPassword)) {
+      setResetError("Mật khẩu mới phải có cả chữ cái và chữ số.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -162,7 +179,19 @@ export default function PasswordReset() {
       return;
     }
     setResetError("");
-    setIsPasswordUpdated(true);
+    setIsUpdating(true);
+    try {
+      await confirmPasswordReset(resetToken, newPassword);
+      setIsPasswordUpdated(true);
+    } catch (caught) {
+      if (caught instanceof PasswordResetApiError) {
+        setResetError(caught.fieldErrors.newPassword ?? caught.message);
+      } else {
+        setResetError("Đã có lỗi xảy ra. Vui lòng thử lại.");
+      }
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (!isModalOpen) return null;
@@ -242,7 +271,9 @@ export default function PasswordReset() {
                       <label className="field-label" htmlFor="confirm-password">Xác nhận mật khẩu</label>
                       <div className={`input-wrap ${resetError ? "input-wrap--error" : ""}`}><LockKeyhole size={18} aria-hidden="true" /><input id="confirm-password" type="password" autoComplete="new-password" required aria-invalid={Boolean(resetError)} aria-describedby={resetError ? "reset-error" : undefined} value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setResetError(""); }} placeholder="Nhập lại mật khẩu mới" /></div>
                       {resetError && <p id="reset-error" className="field-error" role="alert">{resetError}</p>}
-                      <button type="submit" className="primary-button">Cập nhật mật khẩu <ArrowUpRight size={17} /></button>
+                      <button type="submit" className="primary-button" disabled={isUpdating}>
+                        {isUpdating ? <><RefreshCw size={17} className="spin" /> Đang cập nhật…</> : <>Cập nhật mật khẩu <ArrowUpRight size={17} /></>}
+                      </button>
                     </form>
                   </>
                 )}
