@@ -7,6 +7,7 @@ import { ActivationEmail, MailService } from '../users/mail.service';
 const adminHeaders = { 'x-user-id': 'admin-1', 'x-user-roles': 'ADMIN' };
 
 class FakeMailService extends MailService {
+  async sendPasswordReset(): Promise<void> {}
   readonly sent: ActivationEmail[] = [];
   async sendAccountActivation(email: ActivationEmail): Promise<void> {
     this.sent.push(email);

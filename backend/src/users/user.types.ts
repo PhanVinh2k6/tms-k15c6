@@ -20,6 +20,9 @@ export interface UserAccount {
   mustChangePassword: boolean;
   activationTokenHash: string | null;
   activationExpiresAt: Date | null;
+  /** S1-03: chỉ lưu băm của token đặt lại mật khẩu; null khi không có yêu cầu nào đang chờ. */
+  passwordResetTokenHash: string | null;
+  passwordResetExpiresAt: Date | null;
   /** Tăng sau khi đổi mật khẩu; auth layer phải đưa version vào token và so khớp khi xác thực. */
   sessionVersion: number;
   createdAt: Date;
@@ -59,6 +62,15 @@ export interface UpdateUserInput {
   fullName?: string;
   email?: string;
   phone?: string | null;
+}
+
+export interface PasswordResetRequestInput {
+  email: string;
+}
+
+export interface PasswordResetConfirmInput {
+  token: string;
+  newPassword: string;
 }
 
 export interface ChangePasswordInput {
