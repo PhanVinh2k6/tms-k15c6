@@ -8,12 +8,20 @@ export interface ActivationEmail {
   expiresAt: Date;
 }
 
+export interface PasswordResetEmail {
+  to: string;
+  fullName: string;
+  resetLink: string;
+  expiresAt: Date;
+}
+
 /**
  * Cổng gửi email. Service chỉ phụ thuộc vào lớp trừu tượng này,
  * nên khi có SMTP thật chỉ cần viết lớp mới và đổi `useClass` trong UsersModule.
  */
 export abstract class MailService {
   abstract sendAccountActivation(email: ActivationEmail): Promise<void>;
+  abstract sendPasswordReset(email: PasswordResetEmail): Promise<void>;
 }
 
 /**
@@ -30,6 +38,16 @@ export class ConsoleMailService extends MailService {
         `[DEV] Email kích hoạt gửi tới ${email.to} (${email.fullName})`,
         `  Link kích hoạt: ${email.activationLink}`,
         `  Mật khẩu tạm: ${email.temporaryPassword}`,
+        `  Hết hạn lúc: ${email.expiresAt.toISOString()}`,
+      ].join('\n'),
+    );
+  }
+
+  async sendPasswordReset(email: PasswordResetEmail): Promise<void> {
+    this.logger.log(
+      [
+        `[DEV] Email đặt lại mật khẩu gửi tới ${email.to} (${email.fullName})`,
+        `  Link đặt lại: ${email.resetLink}`,
         `  Hết hạn lúc: ${email.expiresAt.toISOString()}`,
       ].join('\n'),
     );

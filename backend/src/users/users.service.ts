@@ -7,7 +7,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { Role } from '../roles/role.types';
 import { MailService } from './mail.service';
 import {
@@ -31,6 +31,7 @@ import { normalizeEmail, normalizePhone, toSearchText } from './users.validation
 
 const ACTIVATION_TTL_MS = 48 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_REQUESTED_MESSAGE = 'Nếu email tồn tại, chúng tôi đã gửi liên kết đặt lại mật khẩu.';
 
 @Injectable()
 export class UsersService {
@@ -39,7 +40,6 @@ export class UsersService {
    * Map giữ thứ tự thêm vào, nên đảo ngược lại là "mới tạo xếp trước".
    */
   private readonly users = new Map<string, UserAccount>();
-  lastPasswordResetToken: string | null = null;
 
   constructor(private readonly mailService: MailService) {
     this.seed('admin-1', 'Quản trị hệ thống', 'admin@tms.local', [Role.ADMIN]);
@@ -71,19 +71,13 @@ export class UsersService {
       activationExpiresAt: expiresAt,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
-      resetTokenHash: null,
-      resetTokenExpiresAt: null,
       sessionVersion: 0,
       createdAt: now,
       updatedAt: now,
     };
     this.users.set(user.id, user);
 
-    // Ưu tiên FRONTEND_ORIGIN, vẫn nhận FRONTEND_URL (tên cũ); 5173 là cổng mặc định của frontend (Vite).
-    const frontendUrl = (process.env.FRONTEND_ORIGIN ?? process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(
-      /\/+$/,
-      '',
-    );
+    const frontendUrl = this.frontendUrl();
     try {
       await this.mailService.sendAccountActivation({
         to: user.email,
@@ -224,27 +218,27 @@ export class UsersService {
     return { message: 'Đổi mật khẩu thành công.' };
   }
 
+  /**
+   * S1-03: gửi liên kết đặt lại mật khẩu (hiệu lực 30 phút, dùng một lần).
+   * Luôn trả cùng một thông báo dù email có tồn tại hay không, để không dò được tài khoản.
+   * Chỉ tài khoản ACTIVE nhận được liên kết: tài khoản bị khoá không được tự mở lại bằng đường này.
+   */
   async requestPasswordReset(email: string): Promise<{ message: string }> {
     const normalizedEmail = normalizeEmail(email);
     const user = [...this.users.values()].find((candidate) => candidate.email === normalizedEmail);
 
-    if (user) {
-      const token = randomBytes(32).toString('base64url');
+    if (user && user.status === UserStatus.ACTIVE) {
+      // Yêu cầu mới ghi đè token cũ, nên liên kết cũ tự mất hiệu lực.
+      const { token, tokenHash } = generateActivationToken();
       const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
-      const tokenHash = hashToken(token);
-
       user.passwordResetTokenHash = tokenHash;
       user.passwordResetExpiresAt = expiresAt;
-      user.resetTokenHash = tokenHash;
-      user.resetTokenExpiresAt = expiresAt;
-      this.lastPasswordResetToken = token;
 
-      const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
       try {
         await this.mailService.sendPasswordReset({
           to: user.email,
           fullName: user.fullName,
-          resetLink: `${frontendUrl}/reset-password?token=${token}`,
+          resetLink: `${this.frontendUrl()}/reset-password?token=${token}`,
           expiresAt,
         });
       } catch {
@@ -256,20 +250,12 @@ export class UsersService {
       }
     }
 
-    return { message: 'Nếu email tồn tại, chúng tôi đã gửi liên kết đặt lại mật khẩu.' };
+    return { message: PASSWORD_RESET_REQUESTED_MESSAGE };
   }
 
-  async requestPasswordResetLink(email: string): Promise<{ message: string }> {
-    return this.requestPasswordReset(email);
-  }
-
-  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    return this.confirmPasswordReset(token, newPassword);
-  }
-
+  /** S1-03: đặt mật khẩu mới bằng token trong liên kết; token bị huỷ ngay sau khi dùng và mọi phiên cũ bị thu hồi. */
   async confirmPasswordReset(token: string, newPassword: string): Promise<{ message: string }> {
-    const trimmedToken = token.trim();
-    const user = this.findUserByPasswordResetToken(trimmedToken);
+    const user = this.findUserByPasswordResetToken(token.trim());
 
     if (!user) {
       throw new BadRequestException({
@@ -299,21 +285,26 @@ export class UsersService {
     const now = Date.now();
 
     for (const user of this.users.values()) {
-      const expiresAt = user.passwordResetExpiresAt ?? user.resetTokenExpiresAt ?? null;
-      const hashedToken = user.passwordResetTokenHash ?? user.resetTokenHash ?? null;
-      if (hashedToken && expiresAt && expiresAt.getTime() > now && hashedToken === tokenHash) {
+      if (
+        user.status === UserStatus.ACTIVE &&
+        user.passwordResetTokenHash === tokenHash &&
+        user.passwordResetExpiresAt &&
+        user.passwordResetExpiresAt.getTime() > now
+      ) {
         return user;
       }
     }
-
     return null;
   }
 
   private clearPasswordResetToken(user: UserAccount): void {
     user.passwordResetTokenHash = null;
     user.passwordResetExpiresAt = null;
-    user.resetTokenHash = null;
-    user.resetTokenExpiresAt = null;
+  }
+
+  /** Ưu tiên FRONTEND_ORIGIN, vẫn nhận FRONTEND_URL (tên cũ); 5173 là cổng mặc định của Vite. */
+  private frontendUrl(): string {
+    return (process.env.FRONTEND_ORIGIN ?? process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
   }
 
   private assertEmailAvailable(email: string): void {
@@ -413,8 +404,6 @@ export class UsersService {
       activationExpiresAt: null,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
-      resetTokenHash: null,
-      resetTokenExpiresAt: null,
       sessionVersion: 0,
       createdAt: now,
       updatedAt: now,

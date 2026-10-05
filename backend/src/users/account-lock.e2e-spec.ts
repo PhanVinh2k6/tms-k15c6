@@ -11,6 +11,7 @@ const adminHeaders = { 'x-user-id': 'admin-1', 'x-user-roles': 'ADMIN' };
 const instructorHeaders = { 'x-user-id': 'user-1', 'x-user-roles': 'INSTRUCTOR' };
 
 class FakeMailService extends MailService {
+  async sendPasswordReset(): Promise<void> {}
   async sendAccountActivation(_email: ActivationEmail): Promise<void> {}
 }
 

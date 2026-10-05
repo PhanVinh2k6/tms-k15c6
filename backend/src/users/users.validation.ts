@@ -5,6 +5,8 @@ import {
   CreateUserInput,
   ListUsersQuery,
   LockUserInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
   UpdateUserInput,
   UserStatus,
 } from './user.types';
@@ -63,6 +65,21 @@ function readEmail(value: unknown, errors: FieldErrors): string | undefined {
     return undefined;
   }
   return normalizeEmail(value);
+}
+
+/** Quy tắc mật khẩu mới (S1-03, S1-04): 8–128 ký tự, có ít nhất một chữ cái và một chữ số. */
+function readNewPassword(value: unknown, errors: FieldErrors): string | undefined {
+  if (typeof value !== 'string' || value.length < 8 || value.length > 128) {
+    errors.newPassword = 'Mật khẩu mới phải từ 8 đến 128 ký tự';
+    return undefined;
+  }
+  if (!/\p{L}/u.test(value)) {
+    errors.newPassword = 'Mật khẩu mới phải có ít nhất một chữ cái';
+  }
+  if (!/\p{N}/u.test(value)) {
+    errors.newPassword = `${errors.newPassword ? `${errors.newPassword}; ` : ''}Mật khẩu mới phải có ít nhất một chữ số`;
+  }
+  return errors.newPassword ? undefined : value;
 }
 
 function readPhone(value: unknown, errors: FieldErrors): string | null | undefined {
@@ -152,22 +169,48 @@ export function parseChangePassword(body: unknown): ChangePasswordInput {
     errors.currentPassword = 'Mật khẩu hiện tại bắt buộc và tối đa 128 ký tự';
   }
 
-  const newPassword = data.newPassword;
-  if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) {
-    errors.newPassword = 'Mật khẩu mới phải từ 8 đến 128 ký tự';
-  } else {
-    if (!/\p{L}/u.test(newPassword)) {
-      errors.newPassword = 'Mật khẩu mới phải có ít nhất một chữ cái';
-    }
-    if (!/\p{N}/u.test(newPassword)) {
-      errors.newPassword = `${errors.newPassword ? `${errors.newPassword}; ` : ''}Mật khẩu mới phải có ít nhất một chữ số`;
-    }
-  }
+  const newPassword = readNewPassword(data.newPassword, errors);
 
   if (Object.keys(errors).length > 0) {
     fail(errors);
   }
   return { currentPassword: currentPassword as string, newPassword: newPassword as string };
+}
+
+function rejectUnknownKeys(data: Record<string, unknown>, allowed: string[], errors: FieldErrors): void {
+  for (const key of Object.keys(data)) {
+    if (!allowed.includes(key)) {
+      errors[key] = 'Trường này không được hỗ trợ';
+    }
+  }
+}
+
+export function parsePasswordResetRequest(body: unknown): PasswordResetRequestInput {
+  const data = asObject(body);
+  const errors: FieldErrors = {};
+  rejectUnknownKeys(data, ['email'], errors);
+  const email = readEmail(data.email, errors);
+  if (Object.keys(errors).length > 0) {
+    fail(errors);
+  }
+  return { email: email as string };
+}
+
+export function parsePasswordResetConfirm(body: unknown): PasswordResetConfirmInput {
+  const data = asObject(body);
+  const errors: FieldErrors = {};
+  rejectUnknownKeys(data, ['token', 'newPassword'], errors);
+
+  const token = typeof data.token === 'string' ? data.token.trim() : '';
+  if (token.length === 0 || token.length > 256) {
+    errors.token = 'Liên kết đặt lại mật khẩu không hợp lệ';
+  }
+  const newPassword = readNewPassword(data.newPassword, errors);
+
+  if (Object.keys(errors).length > 0) {
+    fail(errors);
+  }
+  return { token, newPassword: newPassword as string };
 }
 
 function readPositiveInt(value: unknown, fallback: number): number | undefined {
