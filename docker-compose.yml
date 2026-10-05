@@ -1,0 +1,24 @@
+# Chạy thử toàn bộ hệ thống (staging/demo):  docker compose up --build
+#   Frontend: http://localhost:8080   (đăng nhập: http://localhost:8080/index.html)
+#   Backend : http://localhost:3000
+# Lưu ý: dữ liệu đang lưu trong bộ nhớ (chưa có PostgreSQL) nên restart là mất.
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      FRONTEND_ORIGIN: http://localhost:8080
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
