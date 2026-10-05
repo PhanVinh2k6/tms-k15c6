@@ -38,3 +38,37 @@ Hệ thống Quản lý Đào tạo (TMS) là giải pháp quản lý nội bộ
 - PO: Dư Thanh Hoàng
 - Leader / Scrum Master: Phan Hà Thái Vinh (kiêm Developer)
 - Developers: Chu Hải Đăng, Bùi Hải Đăng, Mạc Văn Trọng, Trịnh Quang Tuân, Bùi Anh Tuấn, Nguyễn Văn Tùng, Dương Công Vinh, Nguyễn Anh Vũ, Lương Minh Đoàn
+
+## 🚀 7. Chạy dự án
+
+```bash
+# Backend  → http://localhost:3000
+cd backend && npm install && npm run start:dev
+
+# Frontend → http://localhost:5173  (đặt VITE_API_URL nếu backend khác cổng; xem frontend/.env.example)
+cd frontend && npm install && npm run dev
+```
+
+Chi tiết API và phân quyền: [backend/README.md](backend/README.md).
+
+## ✅ 8. Definition of Done (mỗi story phải đạt đủ mới được chuyển Done trên Jira)
+
+1. Toàn bộ tiêu chí chấp nhận (AC) được kiểm chứng và đạt.
+2. Code đã qua **ít nhất một người review** và được merge vào `develop` bằng PR.
+3. Có test cho tầng service/API, **độ phủ ≥ 60%** (`npm run test:cov` trong `backend/`).
+4. **CI xanh**: build, lint, test (GitHub Actions — `.github/workflows/ci.yml`).
+5. Đã deploy lên staging và chạy được.
+6. Quyền truy cập được kiểm ở **tầng server** (`@RequirePermission`), không chỉ ẩn ở giao diện.
+7. Giao diện hoạt động đúng ở khổ 360px.
+8. Không còn lỗi mức Major trở lên.
+9. PO đã nghiệm thu trên môi trường staging.
+
+Mẫu PR có sẵn checklist này (`.github/pull_request_template.md`).
+
+## 🔒 9. Quy tắc nhánh `develop` (bật trong GitHub: Settings → Branches)
+
+- Require a pull request before merging, **tối thiểu 1 approval**, huỷ approval cũ khi có commit mới.
+- Require status checks to pass: chọn **`CI xanh`**; bật "Require branches to be up to date before merging".
+- Không cho push thẳng và không cho force-push vào `develop` / `main`.
+- **Không commit trực tiếp trên giao diện web GitHub** (Add files via upload / Delete file) — dễ làm mất file như vụ PR #24.
+- Chỉ mở PR khi story đã xong; nhánh đang code dở thì để PR ở dạng **Draft**.
