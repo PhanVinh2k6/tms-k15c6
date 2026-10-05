@@ -1,6 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ActorMiddleware } from '../roles/actor.middleware';
-import { AdminGuard } from '../roles/admin.guard';
+import { PermissionGuard } from '../roles/permission.guard';
 import { ClassAssignmentModule } from './class-assignment.module';
 import { ConsoleMailService, MailService } from './mail.service';
 import { AccountSecurityController } from './account-security.controller';
@@ -13,7 +13,7 @@ import { UsersService } from './users.service';
   controllers: [UsersController, AccountSecurityController, PasswordResetController],
   providers: [
     UsersService,
-    AdminGuard,
+    PermissionGuard,
     ActorMiddleware,
     { provide: MailService, useClass: ConsoleMailService },
   ],
