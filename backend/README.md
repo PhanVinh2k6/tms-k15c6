@@ -1,32 +1,72 @@
-# TMS Backend — S1-09
+# TMS Backend (NestJS)
 
-Triển khai API **gán và thu hồi vai trò người dùng** cho EP-01.
+API cho EP-01 — Tài khoản, Phân quyền & Hồ sơ (Sprint 1).
 
 ## Chạy local
 
 ```bash
 npm install
-npm run start:dev
+npm run start:dev      # http://localhost:3000
 ```
 
-Mặc định server chạy tại `http://localhost:3000`.
+| Lệnh | Mục đích |
+|---|---|
+| `npm run lint` | ESLint (CI bắt buộc xanh) |
+| `npm run build` | Biên dịch TypeScript |
+| `npm test` | Chạy toàn bộ test |
+| `npm run test:cov` | Test kèm độ phủ; **đỏ nếu dưới 60%** (Definition of Done) |
 
-> Trong scaffold hiện tại, `ActorMiddleware` dùng `x-user-id` và `x-user-roles` để mô phỏng context từ JWT. Khi tích hợp authentication thật, thay middleware này bằng JWT guard nhưng giữ nguyên `req.actor`.
+> **Xác thực hiện tại là giả lập.** `ActorMiddleware` đọc `x-user-id` và `x-user-roles` để mô phỏng JWT.
+> Khi có đăng nhập thật (S1-01/S1-02) thì thay middleware này bằng JWT guard nhưng giữ nguyên `req.actor`.
+> **Không dùng cơ chế header này làm xác thực production.**
+
+## Phân quyền (S1-05)
+
+Mọi route quản trị dùng `@UseGuards(PermissionGuard)` + `@RequirePermission(Permission.X)`; **mặc định từ chối**
+(route không khai báo quyền thì trả 403). Test `rbac-enforcement.e2e-spec.ts` tự quét mọi controller và
+sẽ **đỏ nếu có route nào quên khai báo quyền**.
+
+Ma trận quyền khai báo ở `src/roles/role-permissions.ts`. `USER_WRITE`, `ROLE_READ`, `ROLE_WRITE` chỉ dành cho **ADMIN**
+để vai trò khác không tự cấp quyền Admin cho mình. `USER_READ` hiện còn mở cho Quản lý đào tạo, Tuyển sinh, Kế toán
+(cần PO xác nhận có nên cho xem toàn bộ danh sách tài khoản).
+
+Controller cố ý **không** dùng `PermissionGuard`: `users/me/*` (chỉ cần đăng nhập, tự đổi mật khẩu của mình) và
+`auth/password-reset/*` (công khai, vì người dùng quên mật khẩu chưa đăng nhập được).
 
 ## API
 
-Tất cả endpoint yêu cầu actor là Admin:
+Header giả lập (xem ghi chú trên): `x-user-id: admin-1`, `x-user-roles: ADMIN`.
 
-```http
-x-user-id: admin-1
-x-user-roles: ADMIN
+| Method | Endpoint | Quyền | Story |
+|---|---|---|---|
+| POST | `/users` | `USER_WRITE` | S1-08 tạo tài khoản, gửi email kích hoạt kèm mật khẩu tạm |
+| GET | `/users?q=&role=&status=&page=&pageSize=` | `USER_READ` | S1-08 tìm kiếm, lọc, phân trang (mặc định 20) |
+| GET | `/users/:id` | `USER_READ` | S1-08 |
+| PATCH | `/users/:id` | `USER_WRITE` | S1-08 sửa họ tên, email, số điện thoại |
+| DELETE | `/users/:id` | `USER_WRITE` | S1-08 xoá tài khoản |
+| POST | `/users/:id/lock` · `/unlock` | `USER_WRITE` | S1-10 khoá (bắt buộc `reason`) / mở khoá |
+| GET | `/users/:userId/roles` | `ROLE_READ` | S1-09 |
+| POST · DELETE | `/users/:userId/roles/:role` | `ROLE_WRITE` | S1-09 gán / thu hồi vai trò |
+| PATCH | `/users/me/password` | đăng nhập | S1-04 đổi mật khẩu |
+| POST | `/auth/password-reset/request` | công khai | S1-03 gửi liên kết đặt lại |
+| POST | `/auth/password-reset/confirm` | công khai | S1-03 đặt mật khẩu mới bằng token |
+
+### Đặt lại mật khẩu qua email (S1-03)
+
+```bash
+curl -X POST localhost:3000/auth/password-reset/request \
+  -H 'Content-Type: application/json' -d '{"email":"user@tms.local"}'
+
+curl -X POST localhost:3000/auth/password-reset/confirm \
+  -H 'Content-Type: application/json' -d '{"token":"<token trong email>","newPassword":"MatKhauMoi123"}'
 ```
 
-| Method | Endpoint | Mục đích |
-|---|---|---|
-| GET | `/users/:userId/roles` | Xem các role hiện tại |
-| POST | `/users/:userId/roles/:role` | Gán role; không xoá các role đang có |
-| DELETE | `/users/:userId/roles/:role` | Thu hồi role |
+- Liên kết có hiệu lực **30 phút**, **chỉ dùng một lần**; yêu cầu mới làm liên kết cũ mất hiệu lực. Chỉ lưu băm SHA-256 của token.
+- Luôn trả **cùng một thông báo** dù email có tồn tại hay không (không dò được tài khoản).
+- Chỉ tài khoản `ACTIVE` nhận được liên kết; tài khoản bị khoá không tự mở lại bằng đường này.
+- Mật khẩu mới theo quy tắc chung: 8–128 ký tự, có chữ cái và chữ số, khác mật khẩu hiện tại.
+- Đặt lại thành công thì tăng `sessionVersion` (thu hồi phiên cũ).
+- Email dev: `ConsoleMailService` in link ra terminal. Đặt `FRONTEND_ORIGIN` (mặc định `http://localhost:5173`) để đổi địa chỉ trong link.
 
 ### Đổi mật khẩu của tài khoản đang đăng nhập (S1-04)
 
@@ -54,50 +94,18 @@ x-session-id: session-current-001
 
 > **Giới hạn hiện tại:** registry lưu trong bộ nhớ và `ActorMiddleware` vẫn giả lập đăng nhập bằng `x-user-id` / `x-user-roles`. Request cũ không gửi `x-session-id` được gom vào session `legacy:<userId>`; endpoint đổi mật khẩu yêu cầu ID tường minh để giữ đúng phiên hiện tại. Khi tích hợp JWT thật, `sessionId` phải lấy từ claim `sid` đã ký/xác thực, không tin header do client tự khai; registry cũng cần chuyển sang storage dùng chung/persistent. Không dùng header demo như xác thực production.
 
-Ví dụ:
-
-```bash
-curl -H 'x-user-id: admin-1' -H 'x-user-roles: ADMIN' \
-  -X POST http://localhost:3000/users/user-1/roles/TRAINING_MANAGER
-
-curl -H 'x-user-id: admin-1' -H 'x-user-roles: ADMIN' \
-  http://localhost:3000/users/user-1/roles
-
-curl -H 'x-user-id: admin-1' -H 'x-user-roles: ADMIN' \
-  -X DELETE http://localhost:3000/users/user-1/roles/TRAINING_MANAGER
-```
-
-## S1-09 acceptance criteria
-
-- Một user có thể giữ nhiều role cùng lúc: `Set<Role>` và endpoint POST chỉ thêm role.
-- Thay đổi có hiệu lực ngay ở request tiếp theo: service cập nhật user store đồng bộ.
-- Không thể tự thu hồi `ADMIN`: service trả `400 Bad Request` khi actor tự xoá role Admin.
-- Chỉ Admin được quản lý role: `AdminGuard` trả `403 Forbidden` cho actor không có role `ADMIN`.
-
 ## Kiểm thử
 
 ```bash
-npm run build
-npm test -- --runInBand
+npm run lint && npm run build && npm run test:cov
 ```
 
-nhánh tree 
-backend/
-├── src/
-│   ├── main.ts
-│   ├── app.module.ts
-│   └── roles/
-│       ├── actor.middleware.ts
-│       ├── admin.guard.ts
-│       ├── role.types.ts
-│       ├── roles.controller.ts
-│       ├── roles.module.ts
-│       ├── roles.service.ts
-│       └── roles.e2e-spec.ts
-├── package.json
-├── package-lock.json
-├── tsconfig.json
-├── nest-cli.json
-├── jest.config.js
-├── .gitignore
-└── README.md
+## Cấu trúc
+
+```
+src/
+├── main.ts · app.module.ts
+├── roles/      ActorMiddleware, PermissionGuard, @RequirePermission, ma trận quyền, API vai trò (S1-05, S1-09)
+├── sessions/   sổ đăng ký phiên để thu hồi phiên khác (S1-04)
+└── users/      quản trị tài khoản, khoá/mở khoá, đổi & đặt lại mật khẩu, mail (S1-03, S1-04, S1-08, S1-10)
+```
