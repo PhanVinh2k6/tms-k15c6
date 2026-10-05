@@ -238,7 +238,7 @@ export class UsersService {
         await this.mailService.sendPasswordReset({
           to: user.email,
           fullName: user.fullName,
-          resetLink: `${this.frontendUrl()}/reset-password?token=${token}`,
+          resetLink: `${this.frontendUrl()}/password-reset.html?token=${token}`,
           expiresAt,
         });
       } catch {
