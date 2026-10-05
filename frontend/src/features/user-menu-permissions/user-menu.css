@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap');
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #202744;
+  background: #f6f7fc;
+}
+
+* { box-sizing: border-box; }
+button, a { font: inherit; }
+button { cursor: pointer; }
+
+.permission-shell {
+  min-height: 100vh;
+  display: flex;
+  background: #f6f7fc;
+}
+
+.permission-sidebar {
+  width: 270px;
+  flex: 0 0 270px;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 18px 20px;
+  color: #e9e8ff;
+  background: linear-gradient(165deg, #28245f 0%, #40368a 58%, #55419d 100%);
+}
+
+.sidebar-head { display: flex; align-items: center; justify-content: space-between; }
+.brand-lockup, .compact-brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+.brand-symbol { display: grid; place-items: center; width: 35px; height: 35px; color: #332b76; border-radius: 11px; background: #ffe27b; }
+.brand-lockup strong, .compact-brand strong { display: block; color: #fff; font: 800 22px 'Manrope', sans-serif; letter-spacing: -.04em; }
+.brand-lockup small { display: block; margin-top: 2px; color: #bbb6e3; font-size: 8px; letter-spacing: .13em; }
+
+.icon-button { display: grid; place-items: center; padding: 7px; color: inherit; border: 0; border-radius: 9px; background: transparent; }
+.icon-button:hover { background: rgba(255,255,255,.1); }
+.sidebar-close, .mobile-topbar { display: none; }
+
+.permission-nav { margin-top: 52px; }
+.nav-label { margin: 0 12px 12px; color: #aaa7d5; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.nav-item { width: 100%; display: flex; align-items: center; gap: 12px; margin: 4px 0; padding: 12px; color: #d0cdea; border: 0; border-radius: 10px; background: transparent; font-size: 13px; text-align: left; transition: .18s ease; }
+.nav-item:hover, .nav-item.is-active { color: #fff; background: rgba(255,255,255,.13); }
+.nav-item.is-active { box-shadow: inset 3px 0 #ffe27b; }
+
+.sidebar-note { display: flex; gap: 8px; align-items: flex-start; margin-top: auto; padding: 13px; color: #c6c1ec; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; background: rgba(255,255,255,.07); font-size: 11px; line-height: 1.45; }
+.sidebar-note svg { flex: 0 0 auto; color: #79e4d8; }
+.account-card { width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 10px 8px; color: #fff; border: 0; border-top: 1px solid rgba(255,255,255,.12); background: transparent; text-align: left; }
+.account-avatar, .summary-avatar, .mobile-avatar { display: grid; place-items: center; flex: 0 0 auto; color: #443383; border-radius: 50%; background: #ffe27b; font-size: 11px; font-weight: 800; }
+.account-avatar { width: 34px; height: 34px; }
+.account-copy { min-width: 0; flex: 1; }
+.account-copy strong, .account-copy small, .user-summary strong, .user-summary small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-copy strong { font-size: 12px; }
+.account-copy small { margin-top: 3px; color: #c2bee5; font-size: 10px; }
+
+.permission-content { width: min(100%, 1040px); margin: 0 auto; padding: 68px 56px; }
+.content-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 30px; }
+.eyebrow { margin: 0 0 13px; color: #7969cf; font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+.content-header h1 { margin: 0; color: #292c4c; font: 800 clamp(28px, 4vw, 42px)/1.12 'Manrope', sans-serif; letter-spacing: -.05em; }
+.content-header p:not(.eyebrow) { margin: 12px 0 0; color: #7e8499; font-size: 14px; }
+.user-summary { display: flex; align-items: center; gap: 10px; min-width: 190px; padding: 10px 13px; border: 1px solid #e7e8f1; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(54, 49, 113, .06); }
+.summary-avatar { width: 34px; height: 34px; }
+.user-summary strong { color: #333957; font-size: 12px; }
+.user-summary small { margin-top: 3px; color: #8c91a5; font-size: 11px; }
+.permission-card { display: flex; align-items: flex-start; gap: 15px; margin-top: 54px; padding: 23px; border: 1px solid #e8e7f5; border-radius: 18px; background: #fff; box-shadow: 0 14px 38px rgba(54, 49, 113, .07); }
+.card-icon { display: grid; place-items: center; flex: 0 0 auto; width: 43px; height: 43px; color: #6555c1; border-radius: 13px; background: #efedff; }
+.permission-card h2 { margin: 1px 0 7px; color: #303552; font-size: 16px; }
+.permission-card p { margin: 0; color: #7c8397; font-size: 13px; line-height: 1.6; }
+
+@media (max-width: 700px) {
+  .permission-shell { display: block; }
+  .mobile-topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; height: 62px; padding: 0 15px; color: #fff; background: #30286f; }
+  .mobile-topbar .icon-button { display: grid; }
+  .compact-brand { gap: 8px; }
+  .compact-brand .brand-symbol { width: 29px; height: 29px; border-radius: 8px; }
+  .compact-brand strong { font-size: 19px; }
+  .mobile-avatar { width: 31px; height: 31px; }
+  .permission-sidebar { position: fixed; z-index: 30; inset: 0 auto 0 0; width: min(82vw, 285px); transform: translateX(-105%); transition: transform .2s ease; box-shadow: 15px 0 35px rgba(27, 24, 73, .2); }
+  .permission-sidebar.is-open { transform: translateX(0); }
+  .sidebar-close { display: grid; }
+  .mobile-backdrop { position: fixed; z-index: 25; inset: 0; width: 100%; border: 0; background: rgba(23, 20, 58, .48); }
+  .permission-content { padding: 37px 20px 45px; }
+  .content-header { display: block; }
+  .user-summary { margin-top: 24px; min-width: 0; width: 100%; }
+  .permission-card { margin-top: 32px; padding: 18px; }
+}
+
+@media (max-width: 380px) {
+  .mobile-topbar { height: 56px; padding: 0 12px; }
+  .permission-content { padding: 28px 14px 36px; }
+  .content-header h1 { font-size: 27px; }
+  .content-header p:not(.eyebrow) { font-size: 13px; }
+  .permission-card { gap: 11px; margin-top: 26px; padding: 15px; border-radius: 14px; }
+  .card-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .permission-card h2 { font-size: 14px; line-height: 1.35; }
+  .permission-card p { font-size: 12px; }
+}
