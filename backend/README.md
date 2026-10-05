@@ -35,6 +35,7 @@ PATCH /users/me/password
 Content-Type: application/json
 x-user-id: user-1
 x-user-roles: INSTRUCTOR
+x-session-id: session-current-001
 ```
 
 ```json
@@ -45,11 +46,13 @@ x-user-roles: INSTRUCTOR
 ```
 
 - Không nhận user ID từ request body; chỉ đổi mật khẩu của `req.actor.id`.
+- Gửi `x-session-id` ổn định, riêng cho phiên đăng nhập hiện tại; khi thành công phiên này được giữ, các phiên khác đã biết bị thu hồi và nhận `401 SESSION_REVOKED` ở request tiếp theo.
+- Response thành công gồm `message` và `revokedOtherSessions` (số phiên bị thu hồi).
 - Mật khẩu hiện tại phải đúng. Mật khẩu mới dài 8–128 ký tự, có ít nhất một chữ cái và một chữ số.
 - Tài khoản phải ở trạng thái `ACTIVE`.
-- Khi thành công, `sessionVersion` tăng một đơn vị. Auth/JWT phải đưa version này vào token và so khớp với user hiện hành để token cũ không dùng được.
+- Khi thành công, `sessionVersion` cũng tăng một đơn vị để auth layer có thể đưa version vào token.
 
-> **Giới hạn hiện tại:** develop vẫn dùng `x-user-id` / `x-user-roles` để giả lập đăng nhập; chưa có JWT/session registry thật. Vì vậy `sessionVersion` là điểm nối cho S1-01/S1-02, chưa tự nó thu hồi được các phiên đăng nhập khác. Không triển khai cơ chế header này như xác thực production.
+> **Giới hạn hiện tại:** registry lưu trong bộ nhớ và `ActorMiddleware` vẫn giả lập đăng nhập bằng `x-user-id` / `x-user-roles`. Request cũ không gửi `x-session-id` được gom vào session `legacy:<userId>`; endpoint đổi mật khẩu yêu cầu ID tường minh để giữ đúng phiên hiện tại. Khi tích hợp JWT thật, `sessionId` phải lấy từ claim `sid` đã ký/xác thực, không tin header do client tự khai; registry cũng cần chuyển sang storage dùng chung/persistent. Không dùng header demo như xác thực production.
 
 Ví dụ:
 

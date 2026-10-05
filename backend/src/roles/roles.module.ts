@@ -9,7 +9,7 @@ import { PermissionGuard } from './permission.guard';
 @Module({
   imports: [UsersModule],
   controllers: [RolesController],
-  providers: [RolesService, AdminGuard, PermissionGuard],
+  providers: [RolesService, AdminGuard, PermissionGuard, ActorMiddleware],
 })
 export class RolesModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

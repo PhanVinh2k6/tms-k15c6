@@ -10,7 +10,12 @@ import { UsersService } from './users.service';
 @Module({
   imports: [ClassAssignmentModule],
   controllers: [UsersController, AccountSecurityController],
-  providers: [UsersService, AdminGuard, { provide: MailService, useClass: ConsoleMailService }],
+  providers: [
+    UsersService,
+    AdminGuard,
+    ActorMiddleware,
+    { provide: MailService, useClass: ConsoleMailService },
+  ],
   exports: [UsersService],
 })
 export class UsersModule implements NestModule {
