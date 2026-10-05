@@ -9,6 +9,7 @@ const instructorHeaders = { 'x-user-id': 'user-1', 'x-user-roles': 'INSTRUCTOR' 
 
 /** Thay email thật bằng bản ghi nhận lại, để test kiểm tra được nội dung email. */
 class FakeMailService extends MailService {
+  async sendPasswordReset(): Promise<void> {}
   readonly sent: ActivationEmail[] = [];
   async sendAccountActivation(email: ActivationEmail): Promise<void> {
     this.sent.push(email);
