@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tms
+          POSTGRES_PASSWORD: tms_password
+          POSTGRES_DB: tms_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U tms -d tms_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://tms:tms_password@localhost:5432/tms_test
+      JWT_ACCESS_SECRET: ci-access-secret-32-characters-minimum
+      JWT_REFRESH_SECRET: ci-refresh-secret-32-characters-minimum
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test -- --passWithNoTests
+      - run: npm run build

@@ -2,4 +2,7 @@ node_modules
 dist
 coverage
 .env
-*.log
+.git
+.gitignore
+README.md
+docs
