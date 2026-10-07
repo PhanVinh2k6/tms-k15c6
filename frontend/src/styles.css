@@ -1100,3 +1100,12 @@ input:focus-visible {
   .form-panel { padding: 22px 18px 17px; }
   .social-actions { grid-template-columns: 1fr; }
 }
+
+/* S1-02: logout confirmation and completed logout state */
+.logout-modal-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:20px;background:rgba(35,30,78,.28);backdrop-filter:blur(4px)}
+.logout-modal{width:min(100%,360px);padding:27px 25px 22px;border:1px solid #eeeafa;border-radius:17px;background:#fff;box-shadow:0 24px 70px rgba(45,38,105,.24);text-align:center}
+.modal-icon{display:grid;place-items:center;width:45px;height:45px;margin:0 auto 13px;color:#d05d76;border-radius:50%;background:#fff0f4}
+.logout-modal h2{margin:0;color:#222c4d;font:800 19px/1.2 'Manrope',sans-serif;letter-spacing:-.03em}
+.logout-modal p{margin:10px 0 21px;color:#7b849b;font-size:11px;line-height:1.55}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.modal-actions button{min-height:38px;border-radius:8px;font-size:11px;font-weight:700}.modal-cancel{color:#68738b;border:1px solid #e0e4f0;background:#fff}.modal-confirm{color:#fff;border:0;background:linear-gradient(105deg,#b54f86,#d05d76);box-shadow:0 7px 14px rgba(208,93,118,.2)}
+.logout-success-banner{display:flex;align-items:flex-start;gap:10px;margin-bottom:17px;padding:9px 11px;color:#3d897d;border:1px solid #c8eee7;border-radius:10px;background:#f2fffc}.logout-success-banner svg{flex:0 0 auto;color:#3a9c8f}.logout-success-banner div{display:grid;gap:4px}.logout-success-banner strong{font-size:9px}.logout-success-banner span{font-size:8px;line-height:1.45}
