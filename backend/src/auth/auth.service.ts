@@ -10,6 +10,7 @@ import { Role } from '../roles/role.types';
 import { SessionRegistry } from '../sessions/session-registry.service';
 import { UsersService } from '../users/users.service';
 import { UserAccount, UserStatus } from '../users/user.types';
+import { verifyPassword } from '../users/password.util';
 import { jwtSecret } from './jwt-secret.util';
 
 @Injectable()
@@ -37,7 +38,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     if (this.managedUsers) {
       const user = this.managedUsers.findByEmailForAuth(dto.email);
-      const valid = user && this.managedUsers.isLoginAllowed(user) && await bcrypt.compare(dto.password, user.passwordHash);
+      const valid = user && this.managedUsers.isLoginAllowed(user) && await this.verifyManagedPassword(dto.password, user.passwordHash);
       if (!valid) {
         if (user && user.status === UserStatus.ACTIVE) this.managedUsers.recordFailedLogin(user.id);
         throw new UnauthorizedException('Email hoặc mật khẩu không chính xác.');
@@ -102,6 +103,11 @@ export class AuthService {
 
   /** Identify managed accounts by their Set of roles. */
   private isManaged(user: User | UserAccount): user is UserAccount { return 'roles' in user && user.roles instanceof Set; }
+  /** Managed users are stored with scrypt; accept legacy bcrypt seed hashes during local migration. */
+  private async verifyManagedPassword(password: string, storedHash: string): Promise<boolean> {
+    if (await verifyPassword(password, storedHash)) return true;
+    return bcrypt.compare(password, storedHash).catch(() => false);
+  }
   /** Map legacy demo identities to roles; other legacy accounts receive no roles. */
   private legacyRoles(user: User): Role[] { return user.id === 'admin-1' || user.email === 'admin@tms.local' ? [Role.ADMIN] : user.id === 'user-1' ? [Role.INSTRUCTOR] : []; }
   /** Read the access-token signing secret, falling back to the development default. */

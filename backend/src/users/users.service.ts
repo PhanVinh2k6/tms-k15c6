@@ -462,8 +462,9 @@ export class UsersService {
       phone: null,
       roles: new Set(roles),
       status: UserStatus.ACTIVE,
-      // Tài khoản mẫu chưa có mật khẩu: verifyPassword() luôn trả false với giá trị này.
-      passwordHash: id === 'admin-1' ? '$2b$12$rMB1aRUHcY.DtzrdLekgBe8.pj2MkxPLQQKxurasaQrpoW8jbkl0G' : id === 'user-1' ? '$2b$12$a9SGqhSTOWtQ2GgLe0IBHOEuRJrKIesIIeCw9rhXkzYl6B5xm/8.2' : '$2b$12$rMB1aRUHcY.DtzrdLekgBe8.pj2MkxPLQQKxurasaQrpoW8jbkl0G',
+      // Local demo account only: user@tms.local / User@123.
+      // Keep only the scrypt hash here; never store the demo password in plaintext.
+      passwordHash: id === 'user-1' ? 'scrypt$CAuJx3GTbSaQD/+w2L9JpQ==$7aBsAAwnaE4Nxx8+b5HBPokTl5hR7I8Xp4VTgbLxPo6sSUM5rS3wOctIoqyeKXuPEqUda/01dXXi4tGKE6RgCw==' : '$2b$12$rMB1aRUHcY.DtzrdLekgBe8.pj2MkxPLQQKxurasaQrpoW8jbkl0G',
       mustChangePassword: false,
       activationTokenHash: null,
       activationExpiresAt: null,
