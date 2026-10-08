@@ -1,217 +1,227 @@
-import { useState, type FormEvent } from 'react'
+import { FormEvent, useState } from 'react'
 import {
   ArrowRight,
-  BarChart3,
-  BookOpenCheck,
+  Bell,
+  BookOpen,
+  Building2,
+  CalendarDays,
   Check,
-  Eye,
-  EyeOff,
-  LockKeyhole,
+  ChevronDown,
+  CircleHelp,
+  ClipboardList,
+  GraduationCap,
+  Headphones,
+  LayoutDashboard,
   Mail,
+  MapPin,
+  Menu,
+  MessageSquareText,
+  Phone,
   ShieldCheck,
   Sparkles,
-  UsersRound,
-  type LucideIcon,
+  Users,
+  X,
 } from 'lucide-react'
-import './styles.css'
 
-type Benefit = {
-  icon: LucideIcon
-  text: string
-  description: string
-}
-
-type FormState = {
+type FormData = {
+  fullName: string
+  phone: string
   email: string
-  password: string
-  remember: boolean
+  course: string
+  message: string
 }
 
-type FormErrors = Partial<Record<keyof Omit<FormState, 'remember'>, string>>
-type SocialProvider = 'Google' | 'Facebook'
+type FormErrors = Partial<Record<keyof FormData, string>>
 
-const benefits: Benefit[] = [
-  { icon: BookOpenCheck, text: 'Quản lý khóa học linh hoạt', description: 'Tạo và sắp xếp lộ trình giảng dạy chuyên nghiệp.' },
-  { icon: UsersRound, text: 'Theo dõi học viên thông minh', description: 'Báo cáo tiến trình học tập chi tiết của từng cá nhân.' },
-  { icon: BarChart3, text: 'Phân tích báo cáo tự động', description: 'Đo lường hiệu quả chương trình đào tạo trực quan.' },
+const initialForm: FormData = {
+  fullName: '',
+  phone: '',
+  email: '',
+  course: '',
+  message: '',
+}
+
+const navItems = [
+  { label: 'Tổng quan', icon: LayoutDashboard },
+  { label: 'Khóa học', icon: BookOpen },
+  { label: 'Lịch học', icon: CalendarDays },
+  { label: 'Học viên', icon: Users },
+  { label: 'Báo cáo', icon: ClipboardList },
 ]
 
-const initialForm: FormState = {
-  email: '',
-  password: '',
-  remember: false,
+function FieldLabel({ children, required = false }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <label className="field-label">
+      {children}
+      {required && <span className="required">*</span>}
+    </label>
+  )
 }
 
-export default function App() {
-  const [form, setForm] = useState<FormState>(initialForm)
+function App() {
+  const [form, setForm] = useState<FormData>(initialForm)
   const [errors, setErrors] = useState<FormErrors>({})
-  const [showPassword, setShowPassword] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [socialMessage, setSocialMessage] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
 
-  const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
+  const updateField = (field: keyof FormData, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
-    if (field !== 'remember') {
-      setErrors((current) => ({ ...current, [field]: undefined }))
-    }
-    setSubmitted(false)
-    setSocialMessage('')
+    if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }))
   }
 
-  const validate = (): FormErrors => {
+  const validate = () => {
     const nextErrors: FormErrors = {}
-
-    if (!form.email.trim()) {
-      nextErrors.email = 'Vui lòng nhập email.'
-    } else if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-      nextErrors.email = 'Email chưa đúng định dạng.'
-    }
-
-    if (!form.password) {
-      nextErrors.password = 'Vui lòng nhập mật khẩu.'
-    }
-
+    if (!form.fullName.trim()) nextErrors.fullName = 'Vui lòng nhập họ và tên.'
+    if (!form.phone.trim()) nextErrors.phone = 'Vui lòng nhập số điện thoại.'
+    else if (!/^(0|\+84)[0-9\s.-]{8,}$/.test(form.phone.trim())) nextErrors.phone = 'Số điện thoại chưa đúng định dạng.'
+    if (!form.email.trim()) nextErrors.email = 'Vui lòng nhập email.'
+    else if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) nextErrors.email = 'Email chưa đúng định dạng.'
+    if (!form.course) nextErrors.course = 'Vui lòng chọn khóa học quan tâm.'
     return nextErrors
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const nextErrors = validate()
-    setErrors(nextErrors)
-    setSubmitted(Object.keys(nextErrors).length === 0)
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors)
+      return
+    }
+    setSubmitted(true)
   }
 
-  const handleSocialLogin = (provider: SocialProvider) => {
-    setSocialMessage(`Đã chọn đăng nhập bằng ${provider}. Đây là luồng demo, chưa kết nối database.`)
+  const resetForm = () => {
     setSubmitted(false)
+    setForm(initialForm)
     setErrors({})
   }
 
   return (
-    <main className="page-shell">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-
-      <section className="login-card" aria-label="Giao diện đăng nhập TMS">
-        <aside className="brand-panel">
-          <div className="brand-topline">
-            <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
-            <span className="brand-name">TMS.</span>
+    <div className="app-shell">
+      <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
+        <div className="brand-lockup">
+          <div className="brand-mark"><GraduationCap size={19} strokeWidth={2.3} /></div>
+          <div>
+            <strong>eduflow</strong>
+            <span>QUẢN LÝ ĐÀO TẠO</span>
           </div>
+          <button className="close-menu" onClick={() => setMenuOpen(false)} aria-label="Đóng menu"><X size={19} /></button>
+        </div>
 
-          <div className="brand-copy">
-            <p className="eyebrow"><Sparkles size={14} /> NỀN TẢNG VẬN HÀNH ĐÀO TẠO</p>
-            <h1>Vận hành đào tạo<br /><em>thông minh hơn.</em></h1>
-            <p className="brand-description">Hệ thống quản lý đào tạo toàn diện giúp doanh nghiệp tự động hóa quy trình, tối ưu nguồn lực và nâng cao chất lượng nhân sự vượt trội.</p>
+        <div className="sidebar-section-label">KHÔNG GIAN LÀM VIỆC</div>
+        <nav className="main-nav">
+          {navItems.map(({ label, icon: Icon }) => (
+            <a href="#form" key={label} className={label === 'Học viên' ? 'active' : ''}>
+              <Icon size={17} /> <span>{label}</span>
+            </a>
+          ))}
+        </nav>
+
+        <div className="sidebar-section-label">QUẢN TRỊ HỆ THỐNG</div>
+        <nav className="main-nav secondary-nav">
+          <a href="#form"><Users size={17} /> <span>Người dùng</span></a>
+          <a href="#form"><ShieldCheck size={17} /> <span>Vai trò & phân quyền</span></a>
+          <a href="#form"><Sparkles size={17} /> <span>Cài đặt</span></a>
+        </nav>
+
+        <div className="sidebar-help">
+          <div className="help-icon"><CircleHelp size={16} /></div>
+          <div>
+            <strong>Cần hỗ trợ?</strong>
+            <p>Liên hệ quản trị viên để được hướng dẫn sử dụng hệ thống.</p>
+            <a href="#form">Trung tâm trợ giúp <ArrowRight size={12} /></a>
           </div>
+        </div>
+      </aside>
 
-          <div className="benefit-list">
-            {benefits.map(({ icon: Icon, text, description }) => (
-              <div className="benefit" key={text}>
-                <span className="benefit-icon"><Icon size={17} /></span>
-                <span className="benefit-copy"><strong>{text}</strong><small>{description}</small></span>
-                <Check className="benefit-check" size={15} />
-              </div>
-            ))}
-          </div>
-
-          <div className="panel-footer"><div className="status-dot" /><span>Hệ thống nội bộ • Phiên bản 1.0</span></div>
-        </aside>
-
-        <section className="form-panel">
-          <div className="mobile-brand"><span className="mobile-mark">T</span><span>TMS.</span></div>
-          <div className="form-content">
-            <div className="form-heading">
-              <p className="form-kicker">CHÀO MỪNG QUAY TRỞ LẠI</p>
-              <h2>Đăng nhập</h2>
-              <p>Nhập thông tin tài khoản của bạn để truy cập hệ thống quản trị đào tạo.</p>
+      <main className="main-content">
+        <header className="topbar">
+          <button className="mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Mở menu"><Menu size={22} /></button>
+          <div className="topbar-title">Biểu mẫu đăng ký tư vấn</div>
+          <div className="topbar-actions">
+            <button className="icon-button" aria-label="Thông báo"><Bell size={18} /></button>
+            <div className="user-profile">
+              <div className="avatar">TA</div>
+              <div className="user-copy"><strong>Thạc sĩ</strong><span>quản lý đào tạo</span></div>
+              <ChevronDown size={16} />
             </div>
+          </div>
+        </header>
 
-            <form className="visual-form" onSubmit={handleSubmit} noValidate>
-              <div className="field-group">
-                <label htmlFor="email">Email</label>
-                <div className={`input-wrap${errors.email ? ' has-error' : ''}`}>
-                  <Mail size={18} aria-hidden="true" />
-                  <input
-                    id="email"
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => updateField('email', event.target.value)}
-                    placeholder="name@company.com"
-                    autoComplete="email"
-                    aria-invalid={Boolean(errors.email)}
-                    aria-describedby={errors.email ? 'email-error' : undefined}
-                  />
-                </div>
-                <p className="error-text" id="email-error" role="alert">{errors.email}</p>
-              </div>
-
-              <div className="field-group">
-                <div className="label-row">
-                  <label htmlFor="password">Mật khẩu</label>
-                  <button className="forgot-link" type="button" onClick={() => window.alert('Liên kết đặt lại mật khẩu sẽ được gửi qua email.')}>Quên mật khẩu?</button>
-                </div>
-                <div className={`input-wrap${errors.password ? ' has-error' : ''}`}>
-                  <LockKeyhole size={18} aria-hidden="true" />
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={form.password}
-                    onChange={(event) => updateField('password', event.target.value)}
-                    placeholder="Nhập mật khẩu"
-                    autoComplete="current-password"
-                    aria-invalid={Boolean(errors.password)}
-                    aria-describedby={errors.password ? 'password-error' : undefined}
-                  />
-                  <button
-                    className="password-toggle"
-                    type="button"
-                    onClick={() => setShowPassword((visible) => !visible)}
-                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                <p className="error-text" id="password-error" role="alert">{errors.password}</p>
-              </div>
-
-              <label className="remember-row">
-                <input
-                  type="checkbox"
-                  checked={form.remember}
-                  onChange={(event) => updateField('remember', event.target.checked)}
-                />
-                <span className="custom-checkbox" aria-hidden="true"><Check size={12} /></span>
-                <span>Ghi nhớ đăng nhập</span>
-              </label>
-
-              <button className="submit-button" type="submit">
-                <span>Đăng nhập</span><ArrowRight size={18} />
-              </button>
-              {submitted && <p className="success-text" role="status"><Check size={15} /> Thông tin hợp lệ. Đang chuẩn bị đăng nhập...</p>}
-            </form>
-
-            <div className="social-divider"><span>HOẶC TIẾP TỤC VỚI</span></div>
-            <div className="social-actions" aria-label="Đăng nhập bằng tài khoản mạng xã hội">
-              <button className="social-button" type="button" onClick={() => handleSocialLogin('Google')}>
-                <span className="social-icon google-icon" aria-hidden="true">G</span>
-                <span>Google</span>
-              </button>
-              <button className="social-button" type="button" onClick={() => handleSocialLogin('Facebook')}>
-                <span className="social-icon facebook-icon" aria-hidden="true">f</span>
-                <span>Facebook</span>
-              </button>
+        <div className="content-wrap" id="form">
+          <div className="breadcrumb"><span>Trang chủ</span><span className="crumb-separator">›</span><strong>Đăng ký tư vấn</strong></div>
+          <div className="page-heading">
+            <div>
+              <div className="eyebrow"><MessageSquareText size={14} /> TƯ VẤN KHÓA HỌC</div>
+              <h1>Đăng ký tư vấn</h1>
+              <p>Để lại thông tin, đội ngũ Eduflow sẽ liên hệ với bạn trong thời gian sớm nhất.</p>
             </div>
-            {socialMessage && <p className="social-message" role="status">{socialMessage}</p>}
+            <div className="secure-badge"><ShieldCheck size={15} /> Thông tin được bảo mật</div>
+          </div>
 
-            <div className="security-note"><ShieldCheck size={16} /><span>Dữ liệu được bảo mật tối đa theo tiêu chuẩn ISO 27001</span></div>
+          <div className="form-layout">
+            <section className="form-card">
+              {!submitted ? (
+                <form onSubmit={handleSubmit} noValidate>
+                  <div className="card-intro">
+                    <div className="intro-icon"><Headphones size={20} /></div>
+                    <div><h2>Thông tin liên hệ</h2><p>Hãy điền thông tin để chuyên viên tư vấn hỗ trợ bạn tốt hơn.</p></div>
+                  </div>
+
+                  <div className="fields-grid">
+                    <div className="field-group">
+                      <FieldLabel required>Họ và tên</FieldLabel>
+                      <div className={`input-wrap ${errors.fullName ? 'has-error' : ''}`}><Users size={17} /><input value={form.fullName} onChange={(e) => updateField('fullName', e.target.value)} placeholder="Nhập họ và tên của bạn" /></div>
+                      {errors.fullName && <span className="error-text">{errors.fullName}</span>}
+                    </div>
+                    <div className="field-group">
+                      <FieldLabel required>Số điện thoại</FieldLabel>
+                      <div className={`input-wrap ${errors.phone ? 'has-error' : ''}`}><Phone size={17} /><input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} placeholder="090 123 4567" inputMode="tel" /></div>
+                      {errors.phone && <span className="error-text">{errors.phone}</span>}
+                    </div>
+                    <div className="field-group">
+                      <FieldLabel required>Email</FieldLabel>
+                      <div className={`input-wrap ${errors.email ? 'has-error' : ''}`}><Mail size={17} /><input value={form.email} onChange={(e) => updateField('email', e.target.value)} placeholder="you@example.com" type="email" /></div>
+                      {errors.email && <span className="error-text">{errors.email}</span>}
+                    </div>
+                    <div className="field-group">
+                      <FieldLabel required>Khóa học quan tâm</FieldLabel>
+                      <div className={`input-wrap select-wrap ${errors.course ? 'has-error' : ''}`}><BookOpen size={17} /><select value={form.course} onChange={(e) => updateField('course', e.target.value)}><option value="">Chọn khóa học</option><option>Tiếng Anh giao tiếp</option><option>IELTS Foundation</option><option>Quản lý đào tạo</option><option>Kỹ năng lãnh đạo</option></select><ChevronDown className="select-chevron" size={16} /></div>
+                      {errors.course && <span className="error-text">{errors.course}</span>}
+                    </div>
+                    <div className="field-group full-width">
+                      <FieldLabel>Nội dung cần tư vấn <span className="optional">(không bắt buộc)</span></FieldLabel>
+                      <div className="input-wrap textarea-wrap"><MessageSquareText size={17} /><textarea value={form.message} onChange={(e) => updateField('message', e.target.value)} placeholder="Bạn muốn được tư vấn thêm về điều gì?" rows={4} /></div>
+                    </div>
+                  </div>
+                  <div className="form-footer"><span className="required-note"><span className="required">*</span> Trường thông tin bắt buộc</span><button type="submit" className="primary-button">Gửi yêu cầu tư vấn <ArrowRight size={17} /></button></div>
+                </form>
+              ) : (
+                <div className="success-state">
+                  <div className="success-icon"><Check size={30} strokeWidth={2.5} /></div>
+                  <div className="success-kicker">GỬI THÀNH CÔNG</div>
+                  <h2>Cảm ơn bạn đã đăng ký!</h2>
+                  <p>Eduflow đã nhận được yêu cầu tư vấn của bạn. Chuyên viên sẽ liên hệ qua số điện thoại hoặc email trong thời gian sớm nhất.</p>
+                  <div className="reference-code"><span>Mã yêu cầu</span><strong>EDU-{new Date().getFullYear()}-0824</strong></div>
+                  <button className="secondary-button" onClick={resetForm}>Gửi yêu cầu khác <ArrowRight size={16} /></button>
+                </div>
+              )}
+            </section>
+
+            <aside className="support-card">
+              <div className="support-illustration"><div className="illustration-orbit orbit-one"></div><div className="illustration-orbit orbit-two"></div><div className="illustration-center"><Headphones size={26} /></div><div className="floating-dot dot-one"></div><div className="floating-dot dot-two"></div></div>
+              <h3>Bạn cần hỗ trợ thêm?</h3>
+              <p>Đội ngũ tư vấn Eduflow luôn sẵn sàng giải đáp mọi thắc mắc của bạn.</p>
+              <div className="support-line"><div className="line-icon"><Phone size={15} /></div><div><span>Hotline tư vấn</span><strong>090 123 4567</strong></div></div>
+              <div className="support-line"><div className="line-icon"><Mail size={15} /></div><div><span>Email hỗ trợ</span><strong>support@eduflow.vn</strong></div></div>
+              <div className="support-line"><div className="line-icon"><MapPin size={15} /></div><div><span>Văn phòng</span><strong>Cầu Giấy, Hà Nội</strong></div></div>
+            </aside>
           </div>
-          <div className="form-footer">
-            <p className="copyright">© 2026 TMS Platform.</p>
-            <button className="help-link" type="button" onClick={() => window.alert('Bộ phận hỗ trợ TMS sẽ liên hệ với bạn.')}>Trợ giúp &amp; hỗ trợ</button>
-          </div>
-        </section>
-      </section>
-    </main>
+          <footer className="page-footer">© 2025 eduflow · Hệ thống quản lý đào tạo <span>·</span> Phiên bản 1.0.0</footer>
+        </div>
+      </main>
+    </div>
   )
 }
+
+export default App
