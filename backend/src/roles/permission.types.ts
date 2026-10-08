@@ -21,4 +21,9 @@ export enum Permission {
   CLASS_WRITE = 'CLASS_WRITE',
 
   REPORT_READ = 'REPORT_READ',
+
+  /** S2-04: Danh mục chương trình đào tạo */
+  PROGRAM_READ = 'PROGRAM_READ',
+  PROGRAM_WRITE = 'PROGRAM_WRITE',
 }
+

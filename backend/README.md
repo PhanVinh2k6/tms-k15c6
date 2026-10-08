@@ -50,6 +50,14 @@ Header giả lập (xem ghi chú trên): `x-user-id: admin-1`, `x-user-roles: AD
 | PATCH | `/users/me/password` | đăng nhập | S1-04 đổi mật khẩu |
 | POST | `/auth/password-reset/request` | công khai | S1-03 gửi liên kết đặt lại |
 | POST | `/auth/password-reset/confirm` | công khai | S1-03 đặt mật khẩu mới bằng token |
+| POST | `/programs` | `PROGRAM_WRITE` | S2-04 khai báo chương trình (mã duy nhất, tên, mô tả, thời lượng, học phí, trạng thái) |
+| GET | `/programs?q=&status=&page=&pageSize=` | `PROGRAM_READ` | S2-04 tìm kiếm, lọc, phân trang danh mục chương trình |
+| GET | `/programs/check-code?code=&excludeId=` | `PROGRAM_READ` | S2-04 kiểm tra trùng mã trước khi lưu |
+| GET | `/programs/:id` | `PROGRAM_READ` | S2-04 chi tiết chương trình |
+| PATCH | `/programs/:id` | `PROGRAM_WRITE` | S2-04 cập nhật thông tin chương trình |
+| POST | `/programs/:id/deactivate` | `PROGRAM_WRITE` | S2-04 ngừng áp dụng chương trình |
+| DELETE | `/programs/:id` | `PROGRAM_WRITE` | S2-04 xoá chương trình (chặn khi có lớp đang chạy) |
+
 
 ### Đặt lại mật khẩu qua email (S1-03)
 
@@ -94,6 +102,12 @@ x-session-id: session-current-001
 
 > **Giới hạn hiện tại:** registry lưu trong bộ nhớ và `ActorMiddleware` vẫn giả lập đăng nhập bằng `x-user-id` / `x-user-roles`. Request cũ không gửi `x-session-id` được gom vào session `legacy:<userId>`; endpoint đổi mật khẩu yêu cầu ID tường minh để giữ đúng phiên hiện tại. Khi tích hợp JWT thật, `sessionId` phải lấy từ claim `sid` đã ký/xác thực, không tin header do client tự khai; registry cũng cần chuyển sang storage dùng chung/persistent. Không dùng header demo như xác thực production.
 
+### Quản lý danh mục chương trình đào tạo (S2-04)
+
+- **Khai báo thông tin**: mã chương trình (`code`), tên (`name`), mô tả (`description`), tổng thời lượng (`totalDuration`), học phí chuẩn (`standardTuition`), trạng thái (`status`: `ACTIVE` | `INACTIVE`).
+- **Mã chương trình là duy nhất**: kiểm tra trùng mã khi tạo mới hoặc cập nhật. Trả về `409 Conflict` nếu mã đã tồn tại. Hỗ trợ endpoint `/programs/check-code` để giao diện kiểm tra realtime.
+- **Ràng buộc lớp đang chạy**: chương trình đang có lớp chạy không được xoá (`DELETE` trả về `409 Conflict` kèm mã lỗi `PROGRAM_HAS_RUNNING_CLASSES`), chỉ được ngừng áp dụng (`POST /programs/:id/deactivate` hoặc cập nhật `status: INACTIVE`).
+
 ## Kiểm thử
 
 ```bash
@@ -105,7 +119,9 @@ npm run lint && npm run build && npm run test:cov
 ```
 src/
 ├── main.ts · app.module.ts
+├── programs/   quản lý danh mục chương trình đào tạo (S2-04)
 ├── roles/      ActorMiddleware, PermissionGuard, @RequirePermission, ma trận quyền, API vai trò (S1-05, S1-09)
 ├── sessions/   sổ đăng ký phiên để thu hồi phiên khác (S1-04)
 └── users/      quản trị tài khoản, khoá/mở khoá, đổi & đặt lại mật khẩu, mail (S1-03, S1-04, S1-08, S1-10)
 ```
+
