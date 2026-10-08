@@ -50,6 +50,18 @@ Header giả lập (xem ghi chú trên): `x-user-id: admin-1`, `x-user-roles: AD
 | PATCH | `/users/me/password` | đăng nhập | S1-04 đổi mật khẩu |
 | POST | `/auth/password-reset/request` | công khai | S1-03 gửi liên kết đặt lại |
 | POST | `/auth/password-reset/confirm` | công khai | S1-03 đặt mật khẩu mới bằng token |
+| GET | `/programs/:programId/courses` | `PROGRAM_READ` | S2-06 đọc môn học, thứ tự và tiên quyết |
+| POST · DELETE | `/programs/:programId/courses[/:courseId]` | `PROGRAM_WRITE` | S2-06 gán / gỡ môn học |
+| PATCH | `/programs/:programId/courses/order` | `PROGRAM_WRITE` | S2-06 lưu thứ tự môn học |
+| PUT | `/programs/:programId/courses/:courseId/prerequisites` | `PROGRAM_WRITE` | S2-06 khai báo tiên quyết |
+
+`POST /programs/:programId/courses` nhận `{ "courseId": "...", "prerequisiteCourseIds": [] }`.
+Danh sách trả về được sắp theo `order` tăng dần; `PATCH .../order` nhận `{ "courseIds": ["..."] }`
+và yêu cầu danh sách chứa đúng, không trùng toàn bộ môn đang thuộc chương trình. Có thể đặt tiên quyết
+ngay khi gán môn hoặc thay bằng `PUT .../:courseId/prerequisites` với `{ "prerequisiteCourseIds": [] }`.
+Môn tiên quyết phải thuộc cùng chương trình, không thể tự tiên quyết. Mọi API S2-06 chỉ cấp quyền
+đọc/ghi cho `TRAINING_MANAGER` và `ADMIN`. Khi `DATABASE_URL` được cấu hình, quan hệ và thứ tự được
+lưu trong PostgreSQL; áp dụng migration bằng `npm run migration:run`.
 
 ### Đặt lại mật khẩu qua email (S1-03)
 
