@@ -42,6 +42,13 @@ export class SessionRegistry {
     this.activeSessionsByUser.set(userId, active);
   }
 
+  revokeSession(userId: string, sessionId: string): void {
+    const active = this.activeSessionsByUser.get(userId);
+    active?.delete(sessionId);
+    const revoked = this.revokedSessionsByUser.get(userId) ?? new Set<string>();
+    revoked.add(sessionId);
+    this.revokedSessionsByUser.set(userId, revoked);
+  }
   /** Thu hồi mọi session đã biết của user, ngoại trừ session đang đổi mật khẩu. */
   revokeOtherSessions(userId: string, currentSessionId: string): number {
     this.registerSession(userId, currentSessionId);

@@ -12,19 +12,15 @@ import type {
 
 const API_URL = String(import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 
-/**
- * Danh tính TẠM THỜI. Backend hiện chưa có đăng nhập thật nên đọc hai header x-user-id / x-user-roles.
- * Khi nối đăng nhập (S1-01/S1-02): thay hai hàm dưới bằng token của phiên đăng nhập, các nơi khác không phải sửa.
- */
+/** JWT session is preferred; dev headers remain only for local UI work before login. */
 export function getCurrentUserId(): string {
   return String(import.meta.env.VITE_DEV_USER_ID ?? 'admin-1')
 }
 
 function getAuthHeaders(): Record<string, string> {
-  return {
-    'x-user-id': getCurrentUserId(),
-    'x-user-roles': String(import.meta.env.VITE_DEV_USER_ROLES ?? 'ADMIN'),
-  }
+  const accessToken = window.localStorage.getItem('tms.accessToken')
+  if (accessToken) return { Authorization: `Bearer ${accessToken}` }
+  return { 'x-user-id': getCurrentUserId(), 'x-user-roles': String(import.meta.env.VITE_DEV_USER_ROLES ?? 'ADMIN') }
 }
 
 /** Lỗi từ backend (hoặc mất mạng). `code` khớp mã lỗi backend: ALREADY_LOCKED, NOT_LOCKED, ... */
@@ -125,4 +121,19 @@ export function updateUser(id: string, payload: UpdateUserPayload): Promise<User
 /** Xóa hẳn tài khoản (không khôi phục được). Cần backend có DELETE /users/:id. */
 export function deleteUser(id: string): Promise<DeleteResult> {
   return request<DeleteResult>(`/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export type LoginResult = {
+  data: {
+    accessToken: string
+    refreshToken: string
+    user: { id: string; email: string; fullName: string }
+  }
+}
+
+export function login(email: string, password: string, remember: boolean): Promise<LoginResult> {
+  return request<LoginResult>('/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, remember }),
+  })
 }
