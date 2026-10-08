@@ -34,6 +34,9 @@ export interface UserAccount {
   lockedById?: string | null;
   /** Trạng thái trước khi khoá, để mở khoá thì trả về đúng trạng thái đó. */
   statusBeforeLock?: UserStatus | null;
+  /** Runtime anti-brute-force state; never serialized to API. */
+  failedLoginAttempts?: number;
+  loginLockedUntil?: Date | null;
 }
 
 /** Dữ liệu trả về cho client — không bao giờ chứa mật khẩu hay token. */

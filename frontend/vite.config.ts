@@ -14,6 +14,7 @@ export default defineConfig({
         adminUsers: resolve(import.meta.dirname, 'admin-users.html'),
         adminAccountLock: resolve(import.meta.dirname, 'admin-account-lock.html'),
         passwordReset: resolve(import.meta.dirname, 'password-reset.html'),
+        activate: resolve(import.meta.dirname, 'activate.html'),
       },
     },
   },

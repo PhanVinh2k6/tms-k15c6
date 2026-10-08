@@ -42,6 +42,40 @@ export class SessionRegistry {
     this.activeSessionsByUser.set(userId, active);
   }
 
+  /** Report whether this user has a revocation record for the session ID. */
+  isRevoked(userId: string, sessionId: string): boolean {
+    return this.revokedSessionsByUser.get(userId)?.has(sessionId) ?? false;
+  }
+
+  /** Reject unknown or revoked sessions without adding attacker-controlled IDs to the registry. */
+  assertActiveSession(userId: string, sessionId: string): void {
+    if (this.isRevoked(userId, sessionId) || !this.activeSessionsByUser.get(userId)?.has(sessionId)) {
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'SESSION_INVALID',
+        message: 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
+      });
+    }
+  }
+
+  /** Revoke all currently registered sessions for the user and return their count. */
+  revokeAllSessions(userId: string): number {
+    const active = this.activeSessionsByUser.get(userId) ?? new Set<string>();
+    const revoked = this.revokedSessionsByUser.get(userId) ?? new Set<string>();
+    for (const sessionId of active) revoked.add(sessionId);
+    this.activeSessionsByUser.set(userId, new Set());
+    this.revokedSessionsByUser.set(userId, revoked);
+    return active.size;
+  }
+
+  /** Remove the session from the active set and record its revocation, even if unknown. */
+  revokeSession(userId: string, sessionId: string): void {
+    const active = this.activeSessionsByUser.get(userId);
+    active?.delete(sessionId);
+    const revoked = this.revokedSessionsByUser.get(userId) ?? new Set<string>();
+    revoked.add(sessionId);
+    this.revokedSessionsByUser.set(userId, revoked);
+  }
   /** Thu hồi mọi session đã biết của user, ngoại trừ session đang đổi mật khẩu. */
   revokeOtherSessions(userId: string, currentSessionId: string): number {
     this.registerSession(userId, currentSessionId);

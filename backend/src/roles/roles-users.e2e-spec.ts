@@ -105,17 +105,17 @@ describe('S1-08 link kích hoạt trỏ về frontend', () => {
   it('defaults to the frontend dev port 5173, not the backend port 3000', async () => {
     delete process.env.FRONTEND_ORIGIN;
     delete process.env.FRONTEND_URL;
-    expect(await createAndGetLink('link1@tms.vn')).toMatch(/^http:\/\/localhost:5173\/activate\?token=/);
+    expect(await createAndGetLink('link1@tms.vn')).toMatch(/^http:\/\/localhost:5173\/activate#token=/);
   });
 
   it('uses FRONTEND_ORIGIN and drops a trailing slash', async () => {
     process.env.FRONTEND_ORIGIN = 'https://tms.example.edu.vn/';
-    expect(await createAndGetLink('link2@tms.vn')).toMatch(/^https:\/\/tms\.example\.edu\.vn\/activate\?token=/);
+    expect(await createAndGetLink('link2@tms.vn')).toMatch(/^https:\/\/tms\.example\.edu\.vn\/activate#token=/);
   });
 
   it('still honours the older FRONTEND_URL name', async () => {
     delete process.env.FRONTEND_ORIGIN;
     process.env.FRONTEND_URL = 'https://cu.example.edu.vn';
-    expect(await createAndGetLink('link3@tms.vn')).toMatch(/^https:\/\/cu\.example\.edu\.vn\/activate\?token=/);
+    expect(await createAndGetLink('link3@tms.vn')).toMatch(/^https:\/\/cu\.example\.edu\.vn\/activate#token=/);
   });
 });

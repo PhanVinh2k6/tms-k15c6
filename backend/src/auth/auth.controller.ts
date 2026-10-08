@@ -17,7 +17,8 @@ export class AuthController {
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto) { return this.authService.refresh(dto); }
 
+  /** Delegate logout for the authenticated user and optional session ID. */
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  logout(@CurrentUser() user: { sub: string }) { return this.authService.logout(user.sub); }
+  logout(@CurrentUser() user: { sub: string; sid?: string }) { return this.authService.logout(user.sub, user.sid); }
 }

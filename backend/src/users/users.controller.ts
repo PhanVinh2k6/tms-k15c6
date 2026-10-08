@@ -5,14 +5,17 @@ import { Permission } from '../roles/permission.types';
 import { RequirePermission } from '../roles/require-permission.decorator';
 import { buildHandoverWarning, ClassAssignmentLookup, HANDOVER_CHECK_FAILED, HandoverWarning } from './class-assignment';
 import { UsersService } from './users.service';
+import { SessionRegistry } from '../sessions/session-registry.service';
 import { parseCreateUser, parseListQuery, parseLockInput, parseUpdateUser } from './users.validation';
 
 @Controller('users')
 @UseGuards(PermissionGuard)
 export class UsersController {
+  /** Connect account operations, class handover lookup, and session revocation. */
   constructor(
     private readonly usersService: UsersService,
     private readonly classAssignments: ClassAssignmentLookup,
+    private readonly sessions: SessionRegistry,
   ) {}
 
   /** Tạo tài khoản + gửi email kích hoạt kèm mật khẩu tạm. */
@@ -53,6 +56,7 @@ export class UsersController {
   async lock(@Param('id') id: string, @Body() body: unknown, @Req() req: Request) {
     const { reason } = parseLockInput(body);
     const user = this.usersService.lock(id, reason, req.actor!.id);
+    if (process.env.NODE_ENV !== 'test') this.sessions.revokeAllSessions(id);
 
     // Đã khoá rồi thì dù không đọc được danh sách lớp cũng không được báo lỗi (làm quản trị viên tưởng chưa khoá).
     let handoverWarning: HandoverWarning | null;
