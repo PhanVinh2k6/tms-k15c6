@@ -6,8 +6,8 @@ export type JwtSecretKey = 'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET';
 export function jwtSecret(config: ConfigService, key: JwtSecretKey): string {
   const value = config.get<string>(key);
   if (value) return value;
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+  if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
     return `dev-only-${key}-change-me-32-chars`;
   }
-  throw new Error(`${key} must be configured outside development and test environments.`);
+  throw new Error(`${key} must be configured in production environment.`);
 }

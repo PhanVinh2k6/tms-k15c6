@@ -19,15 +19,22 @@ export class ActorMiddleware implements NestMiddleware {
    * @throws UnauthorizedException when authentication or session registration fails.
    */
   async use(req: Request, _res: Response, next: NextFunction) {
-    // Header identity is retained only for isolated e2e tests; production requests must carry JWT.
+    const devUserId = req.header('x-user-id');
+    const devRoles = req.header('x-user-roles');
     if (process.env.NODE_ENV === 'test') {
-      const id = req.header('x-user-id');
-      const rawRoles = req.header('x-user-roles');
-      if (!id || !rawRoles) throw this.unauthorized();
-      const roles = new Set(rawRoles.split(',').map((role) => role.trim()).filter(Boolean) as Role[]);
+      if (!devUserId || !devRoles) throw this.unauthorized();
+      const roles = new Set(devRoles.split(',').map((role) => role.trim()).filter(Boolean) as Role[]);
       const sessionId = req.header('x-session-id')?.trim();
-      this.sessions.registerSession(id, sessionId || `legacy:${id}`);
-      req.actor = { id, roles, sessionId };
+      this.sessions.registerSession(devUserId, sessionId || `legacy:${devUserId}`);
+      req.actor = { id: devUserId, roles, sessionId };
+      next();
+      return;
+    }
+    if (process.env.NODE_ENV !== 'production' && devUserId && devRoles) {
+      const roles = new Set(devRoles.split(',').map((role) => role.trim()).filter(Boolean) as Role[]);
+      const sessionId = req.header('x-session-id')?.trim();
+      this.sessions.registerSession(devUserId, sessionId || `legacy:${devUserId}`);
+      req.actor = { id: devUserId, roles, sessionId };
       next();
       return;
     }

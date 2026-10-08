@@ -21,10 +21,12 @@ export interface CourseResponse {
   code: string;
   name: string;
   totalSessions: number;
+  numberOfSessions: number;
   weight: number;
   learningOutcomes: string | null;
   programIds: string[];
   status: CourseStatus;
+  hasClasses: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +35,7 @@ export interface CreateCourseInput {
   code: string;
   name: string;
   totalSessions: number;
+  numberOfSessions?: number;
   weight: number;
   learningOutcomes?: string | null;
   programIds?: string[];
@@ -43,6 +46,7 @@ export interface UpdateCourseInput {
   code?: string;
   name?: string;
   totalSessions?: number;
+  numberOfSessions?: number;
   weight?: number;
   learningOutcomes?: string | null;
   programIds?: string[];

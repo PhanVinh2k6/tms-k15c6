@@ -244,15 +244,23 @@ export class CoursesService {
   }
 
   private toResponse(course: Course): CourseResponse {
+    let hasClasses = false;
+    try {
+      hasClasses = Boolean(this.courseClassLookup?.hasClasses(course.id));
+    } catch {
+      hasClasses = false;
+    }
     return {
       id: course.id,
       code: course.code,
       name: course.name,
       totalSessions: course.totalSessions,
+      numberOfSessions: course.totalSessions,
       weight: course.weight,
       learningOutcomes: course.learningOutcomes,
       programIds: [...course.programIds],
       status: course.status,
+      hasClasses,
       createdAt: course.createdAt.toISOString(),
       updatedAt: course.updatedAt.toISOString(),
     };

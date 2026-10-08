@@ -14,6 +14,7 @@ const COURSE_FIELDS = [
   'code',
   'name',
   'totalSessions',
+  'numberOfSessions',
   'weight',
   'learningOutcomes',
   'programIds',
@@ -172,7 +173,10 @@ export function parseCreateCourse(body: unknown): CreateCourseInput {
 
   const code = readCode(data.code, errors);
   const name = readName(data.name, errors);
-  const totalSessions = readTotalSessions(data.totalSessions, errors);
+  const totalSessions = readTotalSessions(
+    data.totalSessions ?? data.numberOfSessions,
+    errors,
+  );
   const weight = readWeight(data.weight, errors);
   const learningOutcomes = readLearningOutcomes(data.learningOutcomes, errors);
   const programIds = readProgramIds(data.programIds, errors);
@@ -186,6 +190,7 @@ export function parseCreateCourse(body: unknown): CreateCourseInput {
     code: code!,
     name: name!,
     totalSessions: totalSessions!,
+    numberOfSessions: totalSessions!,
     weight: weight!,
     learningOutcomes: learningOutcomes ?? null,
     programIds: programIds ?? [],
@@ -202,8 +207,11 @@ export function parseUpdateCourse(body: unknown): UpdateCourseInput {
 
   if ('code' in data) input.code = readCode(data.code, errors);
   if ('name' in data) input.name = readName(data.name, errors);
-  if ('totalSessions' in data)
-    input.totalSessions = readTotalSessions(data.totalSessions, errors);
+  if ('totalSessions' in data || 'numberOfSessions' in data) {
+    const rawSessions = data.totalSessions ?? data.numberOfSessions;
+    input.totalSessions = readTotalSessions(rawSessions, errors);
+    input.numberOfSessions = input.totalSessions;
+  }
   if ('weight' in data) input.weight = readWeight(data.weight, errors);
   if ('learningOutcomes' in data)
     input.learningOutcomes = readLearningOutcomes(data.learningOutcomes, errors);
