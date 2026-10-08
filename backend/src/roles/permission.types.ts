@@ -21,4 +21,9 @@ export enum Permission {
   CLASS_WRITE = 'CLASS_WRITE',
 
   REPORT_READ = 'REPORT_READ',
+
+  /** S2-09: xem / tạo, sửa / xoá lead tuyển sinh. */
+  LEAD_READ = 'LEAD_READ',
+  LEAD_WRITE = 'LEAD_WRITE',
+  LEAD_DELETE = 'LEAD_DELETE',
 }
