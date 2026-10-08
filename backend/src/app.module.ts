@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { AuthUsersModule } from './auth-users/auth-users.module';
+import { LeadsModule } from './leads/leads.module';
 import { User as AuthUser } from './auth-users/user.entity';
 import { RolesModule } from './roles/roles.module';
 import { SessionsModule } from './sessions/sessions.module';
@@ -35,6 +36,7 @@ const persistenceImports = enableS2Persistence
     SessionsModule,
     RolesModule,
     UsersModule,
+    LeadsModule,
   ],
 })
 export class AppModule {}

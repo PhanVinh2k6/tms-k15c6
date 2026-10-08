@@ -50,6 +50,12 @@ Header giả lập (xem ghi chú trên): `x-user-id: admin-1`, `x-user-roles: AD
 | PATCH | `/users/me/password` | đăng nhập | S1-04 đổi mật khẩu |
 | POST | `/auth/password-reset/request` | công khai | S1-03 gửi liên kết đặt lại |
 | POST | `/auth/password-reset/confirm` | công khai | S1-03 đặt mật khẩu mới bằng token |
+| GET | `/leads?page=&pageSize=` | `LEAD_READ` | S2-09 danh sách lead, mới nhất trước (mặc định 20) |
+| GET | `/leads/check-phone?phone=&excludeId=` | `LEAD_READ` | S2-09 kiểm tra trùng số trước khi lưu |
+| GET | `/leads/:id` | `LEAD_READ` | S2-09 |
+| POST | `/leads` | `LEAD_WRITE` | S2-09 tạo lead |
+| PATCH | `/leads/:id` | `LEAD_WRITE` | S2-09 sửa lead |
+| DELETE | `/leads/:id` | `LEAD_DELETE` | S2-09 xoá lead (chỉ Quản lý đào tạo) |
 
 ### Đặt lại mật khẩu qua email (S1-03)
 
@@ -94,6 +100,27 @@ x-session-id: session-current-001
 
 > **Giới hạn hiện tại:** registry lưu trong bộ nhớ và `ActorMiddleware` vẫn giả lập đăng nhập bằng `x-user-id` / `x-user-roles`. Request cũ không gửi `x-session-id` được gom vào session `legacy:<userId>`; endpoint đổi mật khẩu yêu cầu ID tường minh để giữ đúng phiên hiện tại. Khi tích hợp JWT thật, `sessionId` phải lấy từ claim `sid` đã ký/xác thực, không tin header do client tự khai; registry cũng cần chuyển sang storage dùng chung/persistent. Không dùng header demo như xác thực production.
 
+### Quản lý danh sách lead (S2-09)
+
+```http
+POST /leads
+x-user-id: tvts-1
+x-user-roles: ADMISSIONS
+```
+
+```json
+{ "fullName": "Nguyễn Thị Lan", "phone": "0987654321", "email": "lan@gmail.com", "source": "FACEBOOK", "interestedProgram": "ReactJS" }
+```
+
+- Bắt buộc: `fullName` (2–100 ký tự), `phone` (`0xxxxxxxxx`; `+84…`, dấu cách, dấu chấm được chuẩn hoá), `source`, `interestedProgram` (≤ 150 ký tự). `email` không bắt buộc (bỏ trống → `null`).
+- `source`: `FACEBOOK` · `WEBSITE` · `REFERRAL` (Giới thiệu) · `GOOGLE_ADS`.
+- `interestedProgram` tạm lưu tên chương trình vì danh mục chương trình (S2-04) chưa có API.
+- `POST` (201) và `PATCH` (200, sửa một phần) trả `{ "lead": {...}, "duplicateWarning": null | { "message", "duplicates": [{ "id", "fullName", "phone" }] } }`.
+  **Trùng số điện thoại chỉ cảnh báo, lead vẫn được lưu.** Khi sửa, số của chính lead đó không tính là trùng.
+- `GET /leads/check-phone?phone=…&excludeId=<id lead đang sửa>` trả `{ "duplicateWarning": … }` để hiện cảnh báo ngay dưới ô nhập trước khi bấm Lưu.
+- `DELETE` (200 `{ "id" }`) chỉ `TRAINING_MANAGER`; vai trò khác (kể cả ADMIN) nhận `403 FORBIDDEN`. Không tồn tại → `404 LEAD_NOT_FOUND`.
+- Quyền: Tuyển sinh (`ADMISSIONS`) xem/tạo/sửa; Quản lý đào tạo xem/xoá; ADMIN xem/tạo/sửa.
+
 ## Kiểm thử
 
 ```bash
@@ -107,5 +134,6 @@ src/
 ├── main.ts · app.module.ts
 ├── roles/      ActorMiddleware, PermissionGuard, @RequirePermission, ma trận quyền, API vai trò (S1-05, S1-09)
 ├── sessions/   sổ đăng ký phiên để thu hồi phiên khác (S1-04)
-└── users/      quản trị tài khoản, khoá/mở khoá, đổi & đặt lại mật khẩu, mail (S1-03, S1-04, S1-08, S1-10)
+├── users/      quản trị tài khoản, khoá/mở khoá, đổi & đặt lại mật khẩu, mail (S1-03, S1-04, S1-08, S1-10)
+└── leads/      quản lý danh sách lead tuyển sinh (S2-09)
 ```
