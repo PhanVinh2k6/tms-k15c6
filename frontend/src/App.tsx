@@ -16,6 +16,7 @@ import {
 import './styles.css'
 import { ApiError, login } from './features/account-lock/api'
 import Activation from './features/activation/Activation'
+import CourseCatalogPage from './features/course-catalog/CourseCatalogPage'
 
 type Benefit = {
   icon: LucideIcon
@@ -55,6 +56,7 @@ export default function App() {
   const [serverError, setServerError] = useState('')
 
   if (window.location.pathname === '/activate') return <Activation />
+  if (window.location.pathname === '/course-catalog' || window.location.pathname === '/subjects') return <CourseCatalogPage />
 
   /** Update a login field and clear its validation error and previous submission feedback. */
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
