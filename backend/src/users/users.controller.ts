@@ -11,6 +11,7 @@ import { parseCreateUser, parseListQuery, parseLockInput, parseUpdateUser } from
 @Controller('users')
 @UseGuards(PermissionGuard)
 export class UsersController {
+  /** Connect account operations, class handover lookup, and session revocation. */
   constructor(
     private readonly usersService: UsersService,
     private readonly classAssignments: ClassAssignmentLookup,

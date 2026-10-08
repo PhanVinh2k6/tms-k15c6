@@ -44,6 +44,7 @@ export class UsersService {
   private readonly users = new Map<string, UserAccount>();
   private readonly loginFailures = new Map<string, { attempts: number; lockedUntil: Date | null }>();
 
+  /** Initialize the in-memory demo accounts and connect mail and optional session services. */
   constructor(private readonly mailService: MailService, @Optional() private readonly sessions?: SessionRegistry) {
     this.seed('admin-1', 'Quản trị hệ thống', 'admin@tms.local', [Role.ADMIN]);
     this.seed('user-1', 'Giảng viên mẫu', 'user@tms.local', [Role.INSTRUCTOR]);
@@ -101,21 +102,28 @@ export class UsersService {
     return this.toResponse(user);
   }
 
+  /** Return the stored account, including its password hash, by normalized email, or null. */
   findByEmailForAuth(email: string): UserAccount | null {
     const normalized = normalizeEmail(email);
     return [...this.users.values()].find((user) => user.email === normalized) ?? null;
   }
 
+  /**
+   * Return account status, roles, and session version for authentication checks.
+   * @throws NotFoundException when the account does not exist.
+   */
   getAuthState(id: string): { id: string; status: UserStatus; roles: Role[]; sessionVersion: number; fullName: string; email: string } {
     const user = this.getUser(id);
     return { id: user.id, status: user.status, roles: [...user.roles], sessionVersion: user.sessionVersion, fullName: user.fullName, email: user.email };
   }
 
+  /** Allow login only for active accounts whose temporary lockout has expired or is absent. */
   isLoginAllowed(user: UserAccount): boolean {
     const failure = this.loginFailures.get(user.id);
     return user.status === UserStatus.ACTIVE && (!failure?.lockedUntil || failure.lockedUntil.getTime() <= Date.now());
   }
 
+  /** Track a failed attempt; every fifth failure starts a 15-minute lockout and resets the count. */
   recordFailedLogin(userId: string): void {
     const current = this.loginFailures.get(userId) ?? { attempts: 0, lockedUntil: null };
     current.attempts += 1;
@@ -126,8 +134,10 @@ export class UsersService {
     this.loginFailures.set(userId, current);
   }
 
+  /** Remove the account's failed-attempt count and temporary lockout. */
   clearFailedLogins(userId: string): void { this.loginFailures.delete(userId); }
 
+  /** Increment the account version so managed refresh tokens with older versions are rejected. */
   revokeAllSessions(userId: string): void { this.getUser(userId).sessionVersion += 1; }
 
   list(query: ListUsersQuery): PaginatedResult<UserResponse> {
@@ -286,6 +296,11 @@ export class UsersService {
     return { message: PASSWORD_RESET_REQUESTED_MESSAGE };
   }
 
+  /**
+   * Set the password and ACTIVE status for an account with a matching, unexpired token.
+   * Clear the activation token and increment the session version on success.
+   * @throws BadRequestException when no valid activation token matches.
+   */
   async activateAccount(token: string, newPassword: string): Promise<{ message: string }> {
     const tokenHash = hashToken(token.trim());
     const user = [...this.users.values()].find((candidate) => candidate.activationTokenHash === tokenHash && candidate.activationExpiresAt && candidate.activationExpiresAt.getTime() > Date.now());
@@ -421,6 +436,7 @@ export class UsersService {
     return this.toResponse(user);
   }
 
+  /** Serialize public account fields with sorted roles and ISO dates, excluding secrets. */
   toResponse(user: UserAccount): UserResponse {
     return {
       id: user.id,
@@ -436,6 +452,7 @@ export class UsersService {
     };
   }
 
+  /** Insert an active demo account with its preset password hash and initial session version. */
   private seed(id: string, fullName: string, email: string, roles: Role[]): void {
     const now = new Date();
     this.users.set(id, {

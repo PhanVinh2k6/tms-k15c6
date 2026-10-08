@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { activateAccount } from '../account-lock/api'
 
+/** Render the activation form using the URL token, with submission and completion feedback. */
 export default function Activation() {
   const token = new URLSearchParams(window.location.search).get('token') ?? ''
   const [password, setPassword] = useState('')
@@ -8,6 +9,7 @@ export default function Activation() {
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(false)
+  /** Check the token, password format, and confirmation before requesting account activation. */
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError('')
     if (!token) return setError('Liên kết kích hoạt không hợp lệ.')

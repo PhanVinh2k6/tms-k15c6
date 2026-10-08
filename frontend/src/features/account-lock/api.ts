@@ -15,6 +15,10 @@ const API_URL = String(import.meta.env.VITE_API_URL ?? 'http://localhost:3000').
 /** JWT session is preferred; dev headers remain only for local UI work before login. */
 export type SessionClaims = { sub: string; email?: string; roles?: string[]; exp?: number; sessionVersion?: number }
 
+/**
+ * Decode locally stored access-token claims for UI use without verifying the signature.
+ * Return null for a missing or unreadable token, or when its exp claim has elapsed.
+ */
 export function getSession(): SessionClaims | null {
   const token = window.localStorage.getItem('tms.accessToken')
   if (!token) return null
@@ -26,10 +30,12 @@ export function getSession(): SessionClaims | null {
   } catch { return null }
 }
 
+/** Return the decoded session subject, falling back to the configured demo user ID. */
 export function getCurrentUserId(): string {
   return getSession()?.sub ?? String(import.meta.env.VITE_DEV_USER_ID ?? 'admin-1')
 }
 
+/** Build Bearer headers from a stored access token, or use demo identity headers when absent. */
 function getAuthHeaders(): Record<string, string> {
   const accessToken = window.localStorage.getItem('tms.accessToken')
   if (accessToken) return { Authorization: `Bearer ${accessToken}` }
@@ -64,6 +70,11 @@ function readMessage(value: unknown, fallback: string): string {
   return fallback
 }
 
+/**
+ * Send an authenticated JSON request and return its decoded response body.
+ * Eligible 401 responses trigger one refresh attempt and retry when allowRefresh is true.
+ * Initial network and HTTP failures become ApiError; aborts and refresh transport errors propagate.
+ */
 async function request<T>(path: string, init: RequestInit = {}, allowRefresh = true): Promise<T> {
   let response: Response
   try {
@@ -158,6 +169,7 @@ export type LoginResult = {
   }
 }
 
+/** Submit credentials and the refresh-lifetime preference; the caller stores returned tokens. */
 export function login(email: string, password: string, remember: boolean): Promise<LoginResult> {
   return request<LoginResult>('/v1/auth/login', {
     method: 'POST',
@@ -165,6 +177,10 @@ export function login(email: string, password: string, remember: boolean): Promi
   })
 }
 
+/**
+ * Attempt server logout without refreshing, then clear local access and refresh tokens.
+ * Server logout failures are ignored so the browser session can still be cleared.
+ */
 export async function logout(): Promise<void> {
   const token = window.localStorage.getItem('tms.accessToken')
   if (token) await request('/v1/auth/logout', { method: 'POST' }, false).catch(() => undefined)
@@ -172,6 +188,7 @@ export async function logout(): Promise<void> {
   window.sessionStorage.removeItem('tms.refreshToken')
 }
 
+/** Submit an activation token and new password, returning the server confirmation message. */
 export function activateAccount(token: string, newPassword: string): Promise<{ message: string }> {
   return request<{ message: string }>('/auth/activate', { method: 'POST', body: JSON.stringify({ token, newPassword }) })
 }

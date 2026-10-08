@@ -42,10 +42,12 @@ export class SessionRegistry {
     this.activeSessionsByUser.set(userId, active);
   }
 
+  /** Report whether this user has a revocation record for the session ID. */
   isRevoked(userId: string, sessionId: string): boolean {
     return this.revokedSessionsByUser.get(userId)?.has(sessionId) ?? false;
   }
 
+  /** Revoke all currently registered sessions for the user and return their count. */
   revokeAllSessions(userId: string): number {
     const active = this.activeSessionsByUser.get(userId) ?? new Set<string>();
     const revoked = this.revokedSessionsByUser.get(userId) ?? new Set<string>();
@@ -55,6 +57,7 @@ export class SessionRegistry {
     return active.size;
   }
 
+  /** Remove the session from the active set and record its revocation, even if unknown. */
   revokeSession(userId: string, sessionId: string): void {
     const active = this.activeSessionsByUser.get(userId);
     active?.delete(sessionId);

@@ -154,6 +154,10 @@ function RowAction({ account, isSelf, onEdit, onLock, onUnlock, onDelete }: RowA
   )
 }
 
+/**
+ * Render account management for an ADMIN session, or a sign-in/access-denied message.
+ * Provide search, account actions, and logout controls; the backend enforces permissions.
+ */
 export function UserAccountPage() {
   const session = getSession()
   const currentUserId = getCurrentUserId()

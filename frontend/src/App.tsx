@@ -44,6 +44,7 @@ const initialForm: FormState = {
   remember: false,
 }
 
+/** Render account activation at /activate or the login form with validation and request feedback. */
 export default function App() {
   const [form, setForm] = useState<FormState>(initialForm)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -55,6 +56,7 @@ export default function App() {
 
   if (window.location.pathname === '/activate') return <Activation />
 
+  /** Update a login field and clear its validation error and previous submission feedback. */
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }))
     if (field !== 'remember') {
@@ -81,6 +83,10 @@ export default function App() {
     return nextErrors
   }
 
+  /**
+   * Validate credentials, store issued tokens, and open user administration after login.
+   * Display login or connection errors and reset the loading state when the request finishes.
+   */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const nextErrors = validate()

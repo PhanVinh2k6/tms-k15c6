@@ -10,7 +10,13 @@ declare module 'express-serve-static-core' { interface Request { actor?: Actor }
 type AccessPayload = { sub: string; email: string; roles?: Role[]; sid?: string; sessionVersion?: number };
 @Injectable()
 export class ActorMiddleware implements NestMiddleware {
+  /** Connect JWT verification to session tracking and optional managed-account state. */
   constructor(private readonly sessions: SessionRegistry, private readonly jwt: JwtService, private readonly config: ConfigService, @Optional() private readonly users?: UsersService) {}
+  /**
+   * Attach an actor from a verified Bearer JWT, checking available account and session state.
+   * In test mode, read identity headers instead. Call next only after registering the session.
+   * @throws UnauthorizedException when authentication or session registration fails.
+   */
   async use(req: Request, _res: Response, next: NextFunction) {
     // Header identity is retained only for isolated e2e tests; production requests must carry JWT.
     if (process.env.NODE_ENV === 'test') {
@@ -43,6 +49,7 @@ export class ActorMiddleware implements NestMiddleware {
       throw this.unauthorized();
     }
   }
+  /** Build the standard unauthorized response for missing or invalid authentication. */
   private unauthorized(): UnauthorizedException {
     return new UnauthorizedException({ statusCode: 401, code: 'UNAUTHORIZED', message: 'Bạn chưa đăng nhập hoặc phiên đăng nhập không hợp lệ.' });
   }
