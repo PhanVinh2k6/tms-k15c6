@@ -50,6 +50,16 @@ Header giả lập (xem ghi chú trên): `x-user-id: admin-1`, `x-user-roles: AD
 | PATCH | `/users/me/password` | đăng nhập | S1-04 đổi mật khẩu |
 | POST | `/auth/password-reset/request` | công khai | S1-03 gửi liên kết đặt lại |
 | POST | `/auth/password-reset/confirm` | công khai | S1-03 đặt mật khẩu mới bằng token |
+| POST | `/courses` | `COURSE_WRITE` | S2-05 khai báo môn học (mã duy nhất, tên, số buổi, trọng số, chuẩn đầu ra, chương trình) |
+| GET | `/courses?q=&programId=&status=&page=&pageSize=` | `COURSE_READ` | S2-05 tìm kiếm, lọc theo chương trình/trạng thái, phân trang |
+| GET | `/courses/check-code?code=&excludeId=` | `COURSE_READ` | S2-05 kiểm tra trùng mã môn học trước khi lưu |
+| GET | `/courses/:id` | `COURSE_READ` | S2-05 chi tiết môn học |
+| PATCH | `/courses/:id` | `COURSE_WRITE` | S2-05 cập nhật thông tin môn học |
+| POST | `/courses/:id/deactivate` | `COURSE_WRITE` | S2-05 ngừng áp dụng môn học |
+| POST | `/courses/:id/activate` | `COURSE_WRITE` | S2-05 kích hoạt lại môn học |
+| POST · DELETE | `/courses/:id/programs/:programId` | `COURSE_WRITE` | S2-05 gán / gỡ môn học khỏi chương trình |
+| DELETE | `/courses/:id` | `COURSE_WRITE` | S2-05 xoá môn học (chặn khi môn đã có lớp học) |
+
 
 ### Đặt lại mật khẩu qua email (S1-03)
 
@@ -94,6 +104,13 @@ x-session-id: session-current-001
 
 > **Giới hạn hiện tại:** registry lưu trong bộ nhớ và `ActorMiddleware` vẫn giả lập đăng nhập bằng `x-user-id` / `x-user-roles`. Request cũ không gửi `x-session-id` được gom vào session `legacy:<userId>`; endpoint đổi mật khẩu yêu cầu ID tường minh để giữ đúng phiên hiện tại. Khi tích hợp JWT thật, `sessionId` phải lấy từ claim `sid` đã ký/xác thực, không tin header do client tự khai; registry cũng cần chuyển sang storage dùng chung/persistent. Không dùng header demo như xác thực production.
 
+### Quản lý danh mục môn học (S2-05)
+
+- **Khai báo thông tin**: mã môn học (`code`), tên (`name`), số buổi (`totalSessions`), trọng số (`weight`), mô tả chuẩn đầu ra (`learningOutcomes`), danh sách chương trình (`programIds`), trạng thái (`status`: `ACTIVE` | `INACTIVE`).
+- **Mã môn học là duy nhất**: kiểm tra trùng mã khi tạo mới hoặc cập nhật. Trả về `409 Conflict` nếu mã đã tồn tại. Hỗ trợ endpoint `/courses/check-code` để giao diện kiểm tra realtime.
+- **Tái sử dụng ở nhiều chương trình**: Một môn học có thể dùng lại được ở nhiều chương trình đào tạo khác nhau (`programIds`). Hỗ trợ lọc môn theo chương trình (`?programId=...`), gán (`POST /courses/:id/programs/:programId`) và gỡ (`DELETE /courses/:id/programs/:programId`).
+- **Ràng buộc lớp học**: Môn đã có lớp học thì không xoá được (`DELETE` trả về `409 Conflict` kèm mã lỗi `COURSE_HAS_CLASSES`), chỉ được ngừng áp dụng (`POST /courses/:id/deactivate` hoặc cập nhật `status: INACTIVE`).
+
 ## Kiểm thử
 
 ```bash
@@ -105,7 +122,9 @@ npm run lint && npm run build && npm run test:cov
 ```
 src/
 ├── main.ts · app.module.ts
+├── courses/    quản lý danh mục môn học (S2-05)
 ├── roles/      ActorMiddleware, PermissionGuard, @RequirePermission, ma trận quyền, API vai trò (S1-05, S1-09)
 ├── sessions/   sổ đăng ký phiên để thu hồi phiên khác (S1-04)
 └── users/      quản trị tài khoản, khoá/mở khoá, đổi & đặt lại mật khẩu, mail (S1-03, S1-04, S1-08, S1-10)
 ```
+

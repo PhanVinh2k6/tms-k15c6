@@ -16,6 +16,8 @@ export const ROLE_PERMISSIONS: Record<Role, Set<Permission>> = {
     Permission.GRADE_READ,
     Permission.GRADE_WRITE,
     Permission.CLASS_READ,
+    Permission.COURSE_READ,
+    Permission.PROGRAM_READ,
   ]),
 
   [Role.TA]: new Set([
@@ -25,6 +27,8 @@ export const ROLE_PERMISSIONS: Record<Role, Set<Permission>> = {
     Permission.ASSIGNMENT_WRITE,
     Permission.GRADE_READ,
     Permission.CLASS_READ,
+    Permission.COURSE_READ,
+    Permission.PROGRAM_READ,
   ]),
 
   [Role.TRAINING_MANAGER]: new Set([
@@ -38,6 +42,10 @@ export const ROLE_PERMISSIONS: Record<Role, Set<Permission>> = {
     Permission.CLASS_READ,
     Permission.CLASS_WRITE,
     Permission.REPORT_READ,
+    Permission.COURSE_READ,
+    Permission.COURSE_WRITE,
+    Permission.PROGRAM_READ,
+    Permission.PROGRAM_WRITE,
   ]),
 
   [Role.ADMISSIONS]: new Set([
@@ -45,6 +53,8 @@ export const ROLE_PERMISSIONS: Record<Role, Set<Permission>> = {
     Permission.CLASS_READ,
     Permission.TUITION_READ,
     Permission.REPORT_READ,
+    Permission.COURSE_READ,
+    Permission.PROGRAM_READ,
   ]),
 
   [Role.ACCOUNTANT]: new Set([
@@ -52,6 +62,8 @@ export const ROLE_PERMISSIONS: Record<Role, Set<Permission>> = {
     Permission.TUITION_WRITE,
     Permission.USER_READ,
     Permission.REPORT_READ,
+    Permission.COURSE_READ,
+    Permission.PROGRAM_READ,
   ]),
 
   [Role.STUDENT]: new Set([
@@ -60,6 +72,8 @@ export const ROLE_PERMISSIONS: Record<Role, Set<Permission>> = {
     Permission.GRADE_READ,
     Permission.TUITION_READ,
     Permission.CLASS_READ,
+    Permission.COURSE_READ,
+    Permission.PROGRAM_READ,
   ]),
 
   [Role.GUEST]: new Set([]),
