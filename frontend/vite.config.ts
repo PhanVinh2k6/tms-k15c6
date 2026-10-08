@@ -15,6 +15,7 @@ export default defineConfig({
         adminAccountLock: resolve(import.meta.dirname, 'admin-account-lock.html'),
         passwordReset: resolve(import.meta.dirname, 'password-reset.html'),
         activate: resolve(import.meta.dirname, 'activate.html'),
+        leads: resolve(import.meta.dirname, 'leads.html'), // S2-09 quản lý danh sách lead
       },
     },
   },

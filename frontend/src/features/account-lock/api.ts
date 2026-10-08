@@ -102,7 +102,7 @@ function readMessage(value: unknown, fallback: string): string {
  * Eligible 401 responses trigger one refresh attempt and retry when allowRefresh is true.
  * Initial network and HTTP failures become ApiError; aborts and refresh transport errors propagate.
  */
-async function request<T>(path: string, init: RequestInit = {}, allowRefresh = true): Promise<T> {
+export async function request<T>(path: string, init: RequestInit = {}, allowRefresh = true): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_URL}${path}`, {
