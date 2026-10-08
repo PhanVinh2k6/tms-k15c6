@@ -1,3 +1,5 @@
+import { SubjectManagement } from './program-catalog/subject-management/SubjectManagement'
+import { TrainingProgramManagement } from './program-catalog/TrainingProgramManagement'
 import { useState, type FormEvent } from 'react'
 import {
   ArrowRight,
@@ -43,6 +45,12 @@ const initialForm: FormState = {
 }
 
 export default function App() {
+  if (window.location.pathname === '/training-programs') {
+    return <TrainingProgramManagement />
+  }
+  if (window.location.pathname === '/subjects') {
+    return <SubjectManagement />
+  }
   const [form, setForm] = useState<FormState>(initialForm)
   const [errors, setErrors] = useState<FormErrors>({})
   const [showPassword, setShowPassword] = useState(false)
