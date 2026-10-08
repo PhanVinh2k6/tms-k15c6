@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, GripVertical, Plus, RefreshCw, Save, Search, Trash2, X } from 'lucide-react'
-import type { Course, CurriculumCourse, CurriculumCoursePlannerApi, CurriculumCoursePlannerProps } from './types'
+import { BarChart3, BookOpen, ChevronLeft, ChevronRight, CircleHelp, CopyPlus, Filter, GripVertical, LayoutGrid, MoreHorizontal, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from 'lucide-react'
+import type { Course, CurriculumCourse, CurriculumCoursePlannerProps } from './types'
 import './curriculum-course-planner.css'
 
-function orderCourses(courses: CurriculumCourse[]) {
-  return courses.map((course, index) => ({ ...course, order: index + 1 }))
-}
+function orderCourses(courses: CurriculumCourse[]) { return courses.map((course, index) => ({ ...course, order: index + 1 })) }
 
 export default function CurriculumCoursePlanner({ programId, programName, api }: CurriculumCoursePlannerProps) {
   const [courses, setCourses] = useState<CurriculumCourse[]>([])
@@ -13,144 +11,48 @@ export default function CurriculumCoursePlanner({ programId, programName, api }:
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [isPickerOpen, setIsPickerOpen] = useState(false)
-  const [isPrerequisiteOpen, setIsPrerequisiteOpen] = useState(false)
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<'all' | 'used' | 'draft'>('all')
+  const [page, setPage] = useState(1)
+  const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
-  const [orderDirty, setOrderDirty] = useState(false)
-  const [savingOrder, setSavingOrder] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [savingCourseId, setSavingCourseId] = useState<string | null>(null)
-  const [removingCourseId, setRemovingCourseId] = useState<string | null>(null)
 
   async function loadData(signal?: AbortSignal) {
-    setLoading(true)
-    setError('')
-    try {
-      const [programCourses, catalogCourses] = await Promise.all([
-        api.listCoursesInProgram(programId, signal),
-        api.listAvailableCourses(programId, signal),
-      ])
-      setCourses(orderCourses(programCourses))
-      setAvailableCourses(catalogCourses)
-      setOrderDirty(false)
-    } catch (caught) {
-      if ((caught as Error).name !== 'AbortError') setError((caught as Error).message || 'Không tải được dữ liệu lộ trình.')
-    } finally {
-      if (!signal?.aborted) setLoading(false)
-    }
+    setLoading(true); setError('')
+    try { const [programCourses, catalogCourses] = await Promise.all([api.listCoursesInProgram(programId, signal), api.listAvailableCourses(programId, signal)]); setCourses(orderCourses(programCourses)); setAvailableCourses(catalogCourses); setDirty(false) }
+    catch (caught) { if ((caught as Error).name !== 'AbortError') setError((caught as Error).message || 'Không tải được danh sách môn học.') }
+    finally { if (!signal?.aborted) setLoading(false) }
   }
-
-  useEffect(() => {
-    const controller = new AbortController()
-    void loadData(controller.signal)
-    return () => controller.abort()
-  }, [api, programId])
+  useEffect(() => { const controller = new AbortController(); void loadData(controller.signal); return () => controller.abort() }, [api, programId])
 
   const selectedCourse = courses.find((course) => course.id === selectedCourseId)
-  const prerequisiteOptions = courses.filter((course) => course.id !== selectedCourseId)
-  const filteredAvailable = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('vi')
-    const selectedIds = new Set(courses.map((course) => course.id))
-    return availableCourses.filter((course) => !selectedIds.has(course.id) && `${course.code} ${course.name}`.toLocaleLowerCase('vi').includes(normalized))
-  }, [availableCourses, courses, query])
+  const filteredCourses = useMemo(() => courses.filter((course) => `${course.code} ${course.name} ${course.department ?? ''}`.toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi'))), [courses, query])
+  const visibleCourses = filteredCourses.slice((page - 1) * 6, page * 6)
+  const pageCount = Math.max(1, Math.ceil(filteredCourses.length / 6))
   const totalCredits = courses.reduce((sum, course) => sum + course.credits, 0)
+  const usedCount = courses.length
+  const draftCount = 0
 
-  function showError(caught: unknown, fallback: string) {
-    setNotice('')
-    setError(caught instanceof Error ? caught.message : fallback)
-  }
+  function showError(caught: unknown, fallback: string) { setNotice(''); setError(caught instanceof Error ? caught.message : fallback) }
+  function moveCourse(from: number, to: number) { if (to < 0 || to >= courses.length) return; const next = [...courses]; const [moved] = next.splice(from, 1); next.splice(to, 0, moved); setCourses(orderCourses(next)); setDirty(true) }
+  async function saveOrder() { setSaving(true); setError(''); try { const saved = await api.updateCourseOrder(programId, courses.map((course) => course.id)); setCourses(orderCourses(saved)); setDirty(false); setNotice('Đã lưu thứ tự học của chương trình.') } catch (caught) { showError(caught, 'Không lưu được thứ tự môn học.') } finally { setSaving(false) } }
+  async function addCourse(course: Course) { setSavingCourseId(course.id); setError(''); try { const added = await api.addCourseToProgram(programId, course.id); setCourses((current) => orderCourses([...current, added])); setAvailableCourses((current) => current.filter((item) => item.id !== course.id)); setNotice(`Đã thêm ${course.code} vào chương trình.`); setIsPickerOpen(false) } catch (caught) { showError(caught, 'Không thêm được môn học.') } finally { setSavingCourseId(null) } }
+  async function removeCourse(course: CurriculumCourse) { if (!window.confirm(`Gỡ ${course.code} khỏi chương trình?`)) return; try { await api.removeCourseFromProgram(programId, course.id); setCourses((current) => orderCourses(current.filter((item) => item.id !== course.id))); setAvailableCourses((current) => [...current, course]); setNotice(`Đã gỡ ${course.code} khỏi chương trình.`) } catch (caught) { showError(caught, 'Không gỡ được môn học.') } }
+  async function togglePrerequisite(prerequisiteId: string) { if (!selectedCourse) return; const next = selectedCourse.prerequisites.includes(prerequisiteId) ? selectedCourse.prerequisites.filter((id) => id !== prerequisiteId) : [...selectedCourse.prerequisites, prerequisiteId]; setSavingCourseId(selectedCourse.id); try { const saved = await api.updatePrerequisites(programId, selectedCourse.id, next); setCourses((current) => current.map((course) => course.id === saved.id ? saved : course)); setNotice(`Đã lưu môn tiên quyết cho ${selectedCourse.code}.`) } catch (caught) { showError(caught, 'Không lưu được môn tiên quyết.') } finally { setSavingCourseId(null) } }
 
-  function moveCourse(from: number, to: number) {
-    if (to < 0 || to >= courses.length) return
-    const next = [...courses]
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
-    setCourses(orderCourses(next))
-    setOrderDirty(true)
-    setNotice('')
-  }
-
-  async function saveOrder() {
-    setSavingOrder(true)
-    setError('')
-    try {
-      const savedCourses = await api.updateCourseOrder(programId, courses.map((course) => course.id))
-      setCourses(orderCourses(savedCourses))
-      setOrderDirty(false)
-      setNotice('Đã lưu thứ tự môn học.')
-    } catch (caught) {
-      showError(caught, 'Không lưu được thứ tự môn học.')
-    } finally {
-      setSavingOrder(false)
-    }
-  }
-
-  async function addCourse(course: Course) {
-    setSavingCourseId(course.id)
-    setError('')
-    try {
-      const added = await api.addCourseToProgram(programId, course.id)
-      setCourses((current) => [...current, { ...added, order: current.length + 1 }])
-      setAvailableCourses((current) => current.filter((item) => item.id !== course.id))
-      setNotice(`Đã thêm ${course.code} vào chương trình.`)
-      setIsPickerOpen(false)
-      setQuery('')
-    } catch (caught) {
-      showError(caught, 'Không thêm được môn học.')
-    } finally {
-      setSavingCourseId(null)
-    }
-  }
-
-  async function removeCourse(course: CurriculumCourse) {
-    if (!window.confirm(`Gỡ ${course.code} — ${course.name} khỏi chương trình?`)) return
-    setRemovingCourseId(course.id)
-    setError('')
-    try {
-      await api.removeCourseFromProgram(programId, course.id)
-      setCourses((current) => orderCourses(current.filter((item) => item.id !== course.id).map((item) => ({ ...item, prerequisites: item.prerequisites.filter((id) => id !== course.id) }))))
-      setAvailableCourses((current) => [...current, course])
-      setNotice(`Đã gỡ ${course.code} khỏi chương trình.`)
-    } catch (caught) {
-      showError(caught, 'Không gỡ được môn học.')
-    } finally {
-      setRemovingCourseId(null)
-    }
-  }
-
-  async function togglePrerequisite(prerequisiteId: string) {
-    if (!selectedCourse) return
-    const nextPrerequisites = selectedCourse.prerequisites.includes(prerequisiteId)
-      ? selectedCourse.prerequisites.filter((id) => id !== prerequisiteId)
-      : [...selectedCourse.prerequisites, prerequisiteId]
-    setSavingCourseId(selectedCourse.id)
-    setError('')
-    try {
-      const savedCourse = await api.updatePrerequisites(programId, selectedCourse.id, nextPrerequisites)
-      setCourses((current) => current.map((course) => course.id === savedCourse.id ? savedCourse : course))
-      setNotice(`Đã lưu môn tiên quyết cho ${selectedCourse.code}.`)
-    } catch (caught) {
-      showError(caught, 'Không lưu được môn tiên quyết.')
-    } finally {
-      setSavingCourseId(null)
-    }
-  }
-
-  return (
-    <main className="curriculum-planner" aria-labelledby="s206-title">
-      <header className="planner-header">
-        <div><p className="planner-eyebrow">S2-06 · QUẢN LÝ ĐÀO TẠO</p><h1 id="s206-title">Gắn môn học & sắp xếp lộ trình</h1><p className="planner-description">{programName}</p></div>
-        <div className="planner-header-actions"><button className="secondary-button" type="button" onClick={() => void loadData()}><RefreshCw size={16} /> Tải lại</button><button className="save-button" type="button" disabled={!orderDirty || savingOrder} onClick={() => void saveOrder()}><Save size={16} /> {savingOrder ? 'Đang lưu...' : 'Lưu thứ tự'}</button></div>
-      </header>
-      <div className="program-summary" aria-label="Thống kê chương trình"><div className="program-stat"><small>Số môn</small><strong>{courses.length}</strong></div><div className="program-stat"><small>Tổng tín chỉ</small><strong>{totalCredits}</strong></div></div>
-      {error && <div className="feedback feedback-error" role="alert"><strong>Chưa lưu được thay đổi.</strong><span>{error}</span><button type="button" onClick={() => void loadData()}>Thử lại</button></div>}
-      {notice && <div className="feedback feedback-success" role="status">{notice}</div>}
-      {loading ? <div className="state-card" role="status">Đang tải danh sách môn học...</div> : <section className="course-list-panel" aria-labelledby="course-list-title"><div className="panel-heading"><div><h2 id="course-list-title">Môn học trong chương trình</h2><p>Kéo thả hoặc dùng nút mũi tên để thay đổi thứ tự.</p></div><span className="course-count">{courses.length} môn</span></div>{courses.length === 0 ? <div className="state-card">Chưa có môn học trong chương trình.</div> : <div className="course-list">{courses.map((course, index) => <article className={`course-row${draggedId === course.id ? ' is-dragging' : ''}`} key={course.id} draggable onDragStart={() => setDraggedId(course.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (draggedId) moveCourse(courses.findIndex((item) => item.id === draggedId), index); setDraggedId(null) }} onDragEnd={() => setDraggedId(null)}><button className="drag-handle" type="button" aria-label={`Kéo ${course.code} để sắp xếp`}><GripVertical size={18} /></button><span className="order-number">{String(index + 1).padStart(2, '0')}</span><div className="course-main"><span className="course-code">{course.code}</span><h3>{course.name}</h3><small>{course.credits} tín chỉ{course.department ? ` · ${course.department}` : ''}</small></div><div className="row-actions"><div className="move-buttons"><button type="button" aria-label={`Đưa ${course.code} lên`} disabled={index === 0} onClick={() => moveCourse(index, index - 1)}><ArrowUp size={14} /></button><button type="button" aria-label={`Đưa ${course.code} xuống`} disabled={index === courses.length - 1} onClick={() => moveCourse(index, index + 1)}><ArrowDown size={14} /></button></div><button className="prerequisite-button" type="button" onClick={() => { setSelectedCourseId(course.id); setIsPrerequisiteOpen(true) }}>{course.prerequisites.length ? `${course.prerequisites.length} tiên quyết` : 'Tiên quyết'}</button><button className="remove-button" type="button" disabled={removingCourseId === course.id} aria-label={`Gỡ ${course.code}`} onClick={() => void removeCourse(course)}><Trash2 size={16} /></button></div></article>)}</div>}<button className="add-course-button" type="button" onClick={() => setIsPickerOpen(true)}><Plus size={18} /> Thêm môn học</button></section>}
-      {isPickerOpen && <div className="modal-backdrop" role="presentation" onMouseDown={() => setIsPickerOpen(false)}><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="picker-title" onMouseDown={(event) => event.stopPropagation()}><div className="picker-header"><div><p className="planner-eyebrow">DANH MỤC MÔN HỌC</p><h2 id="picker-title">Thêm môn vào chương trình</h2></div><button className="close-button" type="button" aria-label="Đóng" onClick={() => setIsPickerOpen(false)}><X size={19} /></button></div><label className="search-box"><Search size={17} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm theo mã hoặc tên môn" /></label><div className="available-list">{filteredAvailable.length === 0 ? <p className="no-results">Không còn môn phù hợp để thêm.</p> : filteredAvailable.map((course) => <button className="available-course" type="button" key={course.id} disabled={savingCourseId === course.id} onClick={() => void addCourse(course)}><span><strong>{course.code}</strong><b>{course.name}</b><small>{course.credits} tín chỉ</small></span><Plus size={18} /></button>)}</div></section></div>}
-      {isPrerequisiteOpen && selectedCourse && <div className="modal-backdrop" role="presentation" onMouseDown={() => setIsPrerequisiteOpen(false)}><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="prerequisite-title" onMouseDown={(event) => event.stopPropagation()}><div className="picker-header"><div><p className="planner-eyebrow">MÔN TIÊN QUYẾT</p><h2 id="prerequisite-title">{selectedCourse.code} — Môn học trước</h2></div><button className="close-button" type="button" aria-label="Đóng" onClick={() => setIsPrerequisiteOpen(false)}><X size={19} /></button></div><p className="modal-description">Chọn các môn phải hoàn thành trước khi học môn này. Thay đổi được lưu ngay.</p><div className="prerequisite-options">{prerequisiteOptions.map((course) => <label className="prerequisite-option" key={course.id}><input type="checkbox" checked={selectedCourse.prerequisites.includes(course.id)} disabled={savingCourseId === selectedCourse.id} onChange={() => void togglePrerequisite(course.id)} /><span className="fake-checkbox" /><span><strong>{course.code}</strong> {course.name}</span></label>)}</div></section></div>}
-    </main>
-  )
+  return <div className="ep-shell">
+    <aside className="ep-sidebar"><div className="ep-brand"><span className="brand-mark"><LayoutGrid size={19} /></span><span><strong>eduflow.</strong><small>TRAINING PLATFORM</small></span></div><nav><p>KHÔNG GIAN LÀM VIỆC</p><a><BarChart3 size={15} /> Tổng quan</a><a><BookOpen size={15} /> Khóa học</a><a><Users size={15} /> Lớp học</a><a><Users size={15} /> Học viên</a><a><BarChart3 size={15} /> Báo cáo</a><p>QUẢN LÝ ĐÀO TẠO</p><a><BookOpen size={15} /> Chương trình đào tạo</a><a className="active"><BookOpen size={15} /> Danh mục môn học</a><a><Users size={15} /> Giảng viên</a><p>QUẢN TRỊ HỆ THỐNG</p><a><ShieldCheck size={15} /> Vai trò & phân quyền</a><a><Settings size={15} /> Cài đặt</a></nav><div className="sidebar-help"><strong>Chương trình đào tạo</strong><span>Quản lý môn học và lộ trình học tập trong mỗi khóa học.</span></div><div className="sidebar-user"><span className="avatar">QL</span><span><strong>Quản lý đào tạo</strong><small>Training Manager</small></span><ChevronRight size={15} /></div></aside>
+    <main className="ep-main"><header className="topbar"><div className="breadcrumbs">Quản lý đào tạo <span>/</span> <strong>Chương trình đào tạo</strong> <span>/</span> <b>{programName}</b></div><div className="topbar-user"><CircleHelp size={14} /> Trung tâm trợ giúp <span className="avatar small">QL</span></div></header><div className="ep-content">
+      <div className="page-title-row"><div><p className="page-kicker">DANH MỤC ĐÀO TẠO</p><h1>Gắn môn học vào chương trình</h1><p className="page-subtitle">Sắp xếp lộ trình học tập và thiết lập môn tiên quyết cho chương trình.</p></div><button className="primary-button" type="button" onClick={() => setIsPickerOpen(true)}><Plus size={16} /> Thêm môn học</button></div>
+      <section className="stats-grid"><div className="stat-card violet"><span className="stat-icon"><BookOpen size={17} /></span><div><small>Tổng số môn học</small><strong>{courses.length}</strong></div><em>+4 tháng này</em></div><div className="stat-card mint"><span className="stat-icon"><ShieldCheck size={17} /></span><div><small>Tổng tín chỉ</small><strong>{totalCredits}</strong></div><em>Trong chương trình</em></div><div className="stat-card amber"><span className="stat-icon"><CopyPlus size={17} /></span><div><small>Môn có tiên quyết</small><strong>{courses.filter((course) => course.prerequisites.length).length}</strong></div><em>Cần theo dõi</em></div></section>
+      {error && <div className="ep-feedback error" role="alert"><strong>Chưa lưu được thay đổi.</strong> {error}<button type="button" onClick={() => void loadData()}>Thử lại</button></div>}{notice && <div className="ep-feedback success" role="status">{notice}</div>}
+      <section className="course-table-card"><div className="table-toolbar"><div className="tabs"><button className={activeTab === 'all' ? 'selected' : ''} onClick={() => setActiveTab('all')}>Tất cả <span>{courses.length}</span></button><button className={activeTab === 'used' ? 'selected' : ''} onClick={() => setActiveTab('used')}>Đang sử dụng <span>{usedCount}</span></button><button className={activeTab === 'draft' ? 'selected' : ''} onClick={() => setActiveTab('draft')}>Bản nháp <span>{draftCount}</span></button></div><div className="filter-tools"><label className="table-search"><Search size={15} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Tìm theo tên, mã môn học..." /></label><button className="filter-button" type="button"><Filter size={14} /> Bộ lọc</button></div></div><div className="table-wrap"><table><thead><tr><th>MÔN HỌC</th><th>NHÓM ĐÀO TẠO</th><th>THỜI LƯỢNG</th><th>TIÊN QUYẾT</th><th>TRẠNG THÁI</th><th /></tr></thead><tbody>{loading ? <tr><td colSpan={7} className="table-state">Đang tải danh sách môn học...</td></tr> : visibleCourses.length === 0 ? <tr><td colSpan={7} className="table-state">Không tìm thấy môn học phù hợp.</td></tr> : visibleCourses.map((course) => { const index = courses.findIndex((item) => item.id === course.id); return <tr key={course.id} draggable onDragStart={() => setDraggedId(course.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (draggedId) moveCourse(courses.findIndex((item) => item.id === draggedId), index); setDraggedId(null) }}><td><div className="course-cell"><button className="grip" type="button" aria-label={`Sắp xếp ${course.code}`}><GripVertical size={15} /></button><span className="course-pict"><BookOpen size={15} /></span><div><strong>{course.name}</strong><small>{course.code}</small></div></div></td><td><span className="tag">{course.department || 'Công nghệ'}</span></td><td>{course.credits} tín chỉ</td><td><button className={`prerequisite-chip ${course.prerequisites.length ? 'has' : ''}`} type="button" onClick={() => setSelectedCourseId(course.id)}>{course.prerequisites.length ? `${course.prerequisites.length} môn` : 'Thiết lập'}</button></td><td><span className="status"><i /> Đang sử dụng</span></td><td><div className="row-menu"><button type="button" aria-label="Tùy chọn" onClick={() => void removeCourse(course)}><MoreHorizontal size={17} /></button><button className="hidden-delete" type="button" aria-label={`Gỡ ${course.code}`} onClick={() => void removeCourse(course)}><Trash2 size={14} /></button></div></td></tr> })}</tbody></table></div><div className="table-footer"><span>Hiển thị {visibleCourses.length ? (page - 1) * 6 + 1 : 0}–{Math.min(page * 6, filteredCourses.length)} trong {filteredCourses.length} môn học</span><div className="pagination"><button disabled={page === 1} onClick={() => setPage((current) => current - 1)}><ChevronLeft size={15} /></button>{Array.from({ length: pageCount }, (_, index) => <button className={page === index + 1 ? 'current' : ''} key={index} onClick={() => setPage(index + 1)}>{index + 1}</button>)}<button disabled={page === pageCount} onClick={() => setPage((current) => current + 1)}><ChevronRight size={15} /></button></div></div></section>{dirty && <div className="floating-save"><span>Thứ tự đã thay đổi</span><button type="button" disabled={saving} onClick={() => void saveOrder()}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button></div>}
+    </div></main>
+    {isPickerOpen && <div className="modal-backdrop" role="presentation" onMouseDown={() => setIsPickerOpen(false)}><section className="ep-modal" role="dialog" aria-modal="true" aria-labelledby="picker-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-head"><div><p className="page-kicker">DANH MỤC MÔN HỌC</p><h2 id="picker-title">Thêm môn vào chương trình</h2></div><button type="button" aria-label="Đóng" onClick={() => setIsPickerOpen(false)}><X size={18} /></button></div><label className="modal-search"><Search size={16} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm theo mã hoặc tên môn" /></label><div className="available-list">{availableCourses.filter((course) => `${course.code} ${course.name}`.toLowerCase().includes(query.toLowerCase())).map((course) => <button key={course.id} type="button" disabled={savingCourseId === course.id} onClick={() => void addCourse(course)}><span><b>{course.code}</b><strong>{course.name}</strong><small>{course.credits} tín chỉ · {course.department}</small></span><Plus size={17} /></button>)}</div></section></div>}
+    {selectedCourse && <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedCourseId(null)}><section className="ep-modal prerequisite-modal" role="dialog" aria-modal="true" aria-labelledby="prereq-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-head"><div><p className="page-kicker">MÔN TIÊN QUYẾT</p><h2 id="prereq-title">{selectedCourse.code} · Môn học trước</h2></div><button type="button" aria-label="Đóng" onClick={() => setSelectedCourseId(null)}><X size={18} /></button></div><p className="modal-copy">Chọn các môn cần hoàn thành trước khi học môn này.</p><div className="prerequisite-options">{courses.filter((course) => course.id !== selectedCourse.id).map((course) => <label key={course.id}><input type="checkbox" checked={selectedCourse.prerequisites.includes(course.id)} disabled={savingCourseId === selectedCourse.id} onChange={() => void togglePrerequisite(course.id)} /><span>{course.code} — {course.name}</span></label>)}</div></section></div>}
+  </div>
 }
-
-export type { CurriculumCoursePlannerApi }
