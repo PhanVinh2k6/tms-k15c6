@@ -57,7 +57,7 @@ describe('S1-08 user account management API', () => {
       expect(mail.sent).toHaveLength(1);
       expect(mail.sent[0].to).toBe('minhanh@tms.vn');
       expect(mail.sent[0].temporaryPassword).toMatch(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w]).{12}$/);
-      expect(mail.sent[0].activationLink).toMatch(/\/activate\?token=[\w-]{20,}$/);
+      expect(mail.sent[0].activationLink).toMatch(/\/activate#token=[\w-]{20,}$/);
     });
 
     it('does not keep the account when the activation email cannot be sent', async () => {

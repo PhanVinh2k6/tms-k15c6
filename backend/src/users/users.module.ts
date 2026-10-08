@@ -5,12 +5,13 @@ import { ClassAssignmentModule } from './class-assignment.module';
 import { ConsoleMailService, MailService } from './mail.service';
 import { AccountSecurityController } from './account-security.controller';
 import { PasswordResetController } from './password-reset.controller';
+import { ActivationController } from './activation.controller';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
   imports: [ClassAssignmentModule],
-  controllers: [UsersController, AccountSecurityController, PasswordResetController],
+  controllers: [UsersController, AccountSecurityController, PasswordResetController, ActivationController],
   providers: [
     UsersService,
     PermissionGuard,

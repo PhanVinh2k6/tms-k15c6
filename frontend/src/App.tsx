@@ -14,6 +14,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import './styles.css'
+import { ApiError, login } from './features/account-lock/api'
+import Activation from './features/activation/Activation'
 
 type Benefit = {
   icon: LucideIcon
@@ -42,13 +44,19 @@ const initialForm: FormState = {
   remember: false,
 }
 
+/** Render account activation at /activate or the login form with validation and request feedback. */
 export default function App() {
   const [form, setForm] = useState<FormState>(initialForm)
   const [errors, setErrors] = useState<FormErrors>({})
   const [showPassword, setShowPassword] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [socialMessage, setSocialMessage] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState('')
 
+  if (window.location.pathname === '/activate') return <Activation />
+
+  /** Update a login field and clear its validation error and previous submission feedback. */
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }))
     if (field !== 'remember') {
@@ -56,6 +64,7 @@ export default function App() {
     }
     setSubmitted(false)
     setSocialMessage('')
+    setServerError('')
   }
 
   const validate = (): FormErrors => {
@@ -74,11 +83,29 @@ export default function App() {
     return nextErrors
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  /**
+   * Validate credentials, store issued tokens, and open user administration after login.
+   * Display login or connection errors and reset the loading state when the request finishes.
+   */
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const nextErrors = validate()
     setErrors(nextErrors)
-    setSubmitted(Object.keys(nextErrors).length === 0)
+    setServerError('')
+    if (Object.keys(nextErrors).length > 0) return
+    setLoading(true)
+    try {
+      const result = await login(form.email.trim(), form.password, form.remember)
+      window.localStorage.setItem('tms.accessToken', result.data.accessToken)
+      window.sessionStorage.setItem('tms.refreshToken', result.data.refreshToken)
+      setSubmitted(true)
+      window.location.assign('/admin-users.html')
+    } catch (error) {
+      setSubmitted(false)
+      setServerError(error instanceof ApiError ? 'Email hoặc mật khẩu không đúng.' : 'Không kết nối được máy chủ. Vui lòng thử lại.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSocialLogin = (provider: SocialProvider) => {
@@ -149,7 +176,7 @@ export default function App() {
               <div className="field-group">
                 <div className="label-row">
                   <label htmlFor="password">Mật khẩu</label>
-                  <button className="forgot-link" type="button" onClick={() => window.alert('Liên kết đặt lại mật khẩu sẽ được gửi qua email.')}>Quên mật khẩu?</button>
+                  <button className="forgot-link" type="button" onClick={() => window.location.assign('/password-reset.html')}>Quên mật khẩu?</button>
                 </div>
                 <div className={`input-wrap${errors.password ? ' has-error' : ''}`}>
                   <LockKeyhole size={18} aria-hidden="true" />
@@ -185,10 +212,11 @@ export default function App() {
                 <span>Ghi nhớ đăng nhập</span>
               </label>
 
-              <button className="submit-button" type="submit">
-                <span>Đăng nhập</span><ArrowRight size={18} />
+              <button className="submit-button" type="submit" disabled={loading}>
+                <span>{loading ? 'Đang đăng nhập…' : 'Đăng nhập'}</span><ArrowRight size={18} />
               </button>
-              {submitted && <p className="success-text" role="status"><Check size={15} /> Thông tin hợp lệ. Đang chuẩn bị đăng nhập...</p>}
+              {serverError && <p className="error-text server-error" role="alert">{serverError}</p>}
+              {submitted && <p className="success-text" role="status"><Check size={15} /> Đăng nhập thành công.</p>}
             </form>
 
             <div className="social-divider"><span>HOẶC TIẾP TỤC VỚI</span></div>

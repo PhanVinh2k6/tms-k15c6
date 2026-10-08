@@ -12,19 +12,61 @@ import type {
 
 const API_URL = String(import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 
+/** JWT session is preferred; dev headers remain only for local UI work before login. */
+export type SessionClaims = { sub: string; email?: string; roles?: string[]; exp?: number; sessionVersion?: number }
+
 /**
- * Danh tính TẠM THỜI. Backend hiện chưa có đăng nhập thật nên đọc hai header x-user-id / x-user-roles.
- * Khi nối đăng nhập (S1-01/S1-02): thay hai hàm dưới bằng token của phiên đăng nhập, các nơi khác không phải sửa.
+ * Decode locally stored access-token claims for UI use without verifying the signature.
+ * Return null for a missing or unreadable token, or when its exp claim has elapsed.
  */
-export function getCurrentUserId(): string {
-  return String(import.meta.env.VITE_DEV_USER_ID ?? 'admin-1')
+export function getSession(): SessionClaims | null {
+  const token = window.localStorage.getItem('tms.accessToken')
+  if (!token) return null
+  try {
+    const payload = token.split('.')[1]
+    const claims = JSON.parse(window.atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as SessionClaims
+    if (claims.exp && claims.exp * 1000 <= Date.now()) return null
+    return claims
+  } catch { return null }
 }
 
+/** Return the decoded session subject, falling back to the configured demo user ID. */
+export function getCurrentUserId(): string {
+  return getSession()?.sub ?? String(import.meta.env.VITE_DEV_USER_ID ?? 'admin-1')
+}
+
+/** Build Bearer headers from a stored access token, or development-only demo headers when absent. */
 function getAuthHeaders(): Record<string, string> {
-  return {
-    'x-user-id': getCurrentUserId(),
-    'x-user-roles': String(import.meta.env.VITE_DEV_USER_ROLES ?? 'ADMIN'),
-  }
+  const accessToken = window.localStorage.getItem('tms.accessToken')
+  if (accessToken) return { Authorization: `Bearer ${accessToken}` }
+  if (!import.meta.env.DEV) return {}
+  return { 'x-user-id': getCurrentUserId(), 'x-user-roles': String(import.meta.env.VITE_DEV_USER_ROLES ?? 'ADMIN') }
+}
+
+let refreshPromise: Promise<boolean> | null = null
+
+/** Refresh the access token once even when several requests receive 401 concurrently. */
+export function refreshSession(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise
+  const refreshToken = window.sessionStorage.getItem('tms.refreshToken')
+  if (!refreshToken) return Promise.resolve(false)
+
+  refreshPromise = fetch(`${API_URL}/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  })
+    .then(async (response) => {
+      if (!response.ok) return false
+      const renewedBody = await response.json() as LoginResult
+      window.localStorage.setItem('tms.accessToken', renewedBody.data.accessToken)
+      window.sessionStorage.setItem('tms.refreshToken', renewedBody.data.refreshToken)
+      return true
+    })
+    .catch(() => false)
+    .finally(() => { refreshPromise = null })
+
+  return refreshPromise
 }
 
 /** Lỗi từ backend (hoặc mất mạng). `code` khớp mã lỗi backend: ALREADY_LOCKED, NOT_LOCKED, ... */
@@ -55,7 +97,12 @@ function readMessage(value: unknown, fallback: string): string {
   return fallback
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+/**
+ * Send an authenticated JSON request and return its decoded response body.
+ * Eligible 401 responses trigger one refresh attempt and retry when allowRefresh is true.
+ * Initial network and HTTP failures become ApiError; aborts and refresh transport errors propagate.
+ */
+async function request<T>(path: string, init: RequestInit = {}, allowRefresh = true): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_URL}${path}`, {
@@ -79,6 +126,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && allowRefresh && !path.includes('/auth/login') && !path.includes('/auth/refresh')) {
+      if (await refreshSession()) return request<T>(path, init, false)
+      window.localStorage.removeItem('tms.accessToken')
+      window.sessionStorage.removeItem('tms.refreshToken')
+    }
     const data = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
     const errors = data.errors && typeof data.errors === 'object' ? (data.errors as Record<string, string>) : {}
     throw new ApiError(
@@ -125,4 +177,36 @@ export function updateUser(id: string, payload: UpdateUserPayload): Promise<User
 /** Xóa hẳn tài khoản (không khôi phục được). Cần backend có DELETE /users/:id. */
 export function deleteUser(id: string): Promise<DeleteResult> {
   return request<DeleteResult>(`/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export type LoginResult = {
+  data: {
+    accessToken: string
+    refreshToken: string
+    user: { id: string; email: string; fullName: string }
+  }
+}
+
+/** Submit credentials and the refresh-lifetime preference; the caller stores returned tokens. */
+export function login(email: string, password: string, remember: boolean): Promise<LoginResult> {
+  return request<LoginResult>('/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, remember }),
+  })
+}
+
+/**
+ * Attempt server logout without refreshing, then clear local access and refresh tokens.
+ * Server logout failures are ignored so the browser session can still be cleared.
+ */
+export async function logout(): Promise<void> {
+  const token = window.localStorage.getItem('tms.accessToken')
+  if (token) await request('/v1/auth/logout', { method: 'POST' }, false).catch(() => undefined)
+  window.localStorage.removeItem('tms.accessToken')
+  window.sessionStorage.removeItem('tms.refreshToken')
+}
+
+/** Submit an activation token and new password, returning the server confirmation message. */
+export function activateAccount(token: string, newPassword: string): Promise<{ message: string }> {
+  return request<{ message: string }>('/auth/activate', { method: 'POST', body: JSON.stringify({ token, newPassword }) })
 }
