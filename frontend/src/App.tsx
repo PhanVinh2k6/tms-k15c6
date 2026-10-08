@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import './styles.css'
 import { ApiError, login } from './features/account-lock/api'
+import Activation from './features/activation/Activation'
 
 type Benefit = {
   icon: LucideIcon
@@ -51,6 +52,8 @@ export default function App() {
   const [socialMessage, setSocialMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState('')
+
+  if (window.location.pathname === '/activate') return <Activation />
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -167,7 +170,7 @@ export default function App() {
               <div className="field-group">
                 <div className="label-row">
                   <label htmlFor="password">Mật khẩu</label>
-                  <button className="forgot-link" type="button" onClick={() => window.alert('Liên kết đặt lại mật khẩu sẽ được gửi qua email.')}>Quên mật khẩu?</button>
+                  <button className="forgot-link" type="button" onClick={() => window.location.assign('/password-reset.html')}>Quên mật khẩu?</button>
                 </div>
                 <div className={`input-wrap${errors.password ? ' has-error' : ''}`}>
                   <LockKeyhole size={18} aria-hidden="true" />

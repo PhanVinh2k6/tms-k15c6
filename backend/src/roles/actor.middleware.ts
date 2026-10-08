@@ -1,14 +1,16 @@
-import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NestMiddleware, Optional, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Request, Response, NextFunction } from 'express';
 import { SessionRegistry } from '../sessions/session-registry.service';
 import { Actor, Role } from './role.types';
+import { UsersService } from '../users/users.service';
+import { UserStatus } from '../users/user.types';
 declare module 'express-serve-static-core' { interface Request { actor?: Actor } }
-type AccessPayload = { sub: string; email: string; roles?: Role[]; sid?: string };
+type AccessPayload = { sub: string; email: string; roles?: Role[]; sid?: string; sessionVersion?: number };
 @Injectable()
 export class ActorMiddleware implements NestMiddleware {
-  constructor(private readonly sessions: SessionRegistry, private readonly jwt: JwtService, private readonly config: ConfigService) {}
+  constructor(private readonly sessions: SessionRegistry, private readonly jwt: JwtService, private readonly config: ConfigService, @Optional() private readonly users?: UsersService) {}
   async use(req: Request, _res: Response, next: NextFunction) {
     // Header identity is retained only for isolated e2e tests; production requests must carry JWT.
     if (process.env.NODE_ENV === 'test') {
@@ -30,7 +32,9 @@ export class ActorMiddleware implements NestMiddleware {
         secret: this.config.get<string>('JWT_ACCESS_SECRET') ?? 'dev-only-access-secret-change-me-32-chars',
       });
       if (!payload.sub || !payload.sid || !Array.isArray(payload.roles)) throw this.unauthorized();
-      const roles = new Set(payload.roles.filter((role) => Object.values(Role).includes(role)));
+      const state = this.users?.getAuthState(payload.sub);
+      if (state && (state.status !== UserStatus.ACTIVE || this.sessions.isRevoked(payload.sub, payload.sid))) throw this.unauthorized();
+      const roles = new Set(((state?.roles ?? payload.roles) as Role[]).filter((role: Role) => Object.values(Role).includes(role)));
       this.sessions.registerSession(payload.sub, payload.sid);
       req.actor = { id: payload.sub, roles, sessionId: payload.sid };
       next();

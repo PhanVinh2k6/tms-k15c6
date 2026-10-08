@@ -6,6 +6,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
+  Optional,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Role } from '../roles/role.types';
@@ -28,6 +29,7 @@ import {
   ChangePasswordInput,
 } from './user.types';
 import { normalizeEmail, normalizePhone, toSearchText } from './users.validation';
+import { SessionRegistry } from '../sessions/session-registry.service';
 
 const ACTIVATION_TTL_MS = 48 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
@@ -40,8 +42,9 @@ export class UsersService {
    * Map giữ thứ tự thêm vào, nên đảo ngược lại là "mới tạo xếp trước".
    */
   private readonly users = new Map<string, UserAccount>();
+  private readonly loginFailures = new Map<string, { attempts: number; lockedUntil: Date | null }>();
 
-  constructor(private readonly mailService: MailService) {
+  constructor(private readonly mailService: MailService, @Optional() private readonly sessions?: SessionRegistry) {
     this.seed('admin-1', 'Quản trị hệ thống', 'admin@tms.local', [Role.ADMIN]);
     this.seed('user-1', 'Giảng viên mẫu', 'user@tms.local', [Role.INSTRUCTOR]);
     this.seed('accountant-1', 'Kế toán mẫu', 'accountant@tms.local', [Role.ACCOUNTANT]);
@@ -97,6 +100,35 @@ export class UsersService {
 
     return this.toResponse(user);
   }
+
+  findByEmailForAuth(email: string): UserAccount | null {
+    const normalized = normalizeEmail(email);
+    return [...this.users.values()].find((user) => user.email === normalized) ?? null;
+  }
+
+  getAuthState(id: string): { id: string; status: UserStatus; roles: Role[]; sessionVersion: number; fullName: string; email: string } {
+    const user = this.getUser(id);
+    return { id: user.id, status: user.status, roles: [...user.roles], sessionVersion: user.sessionVersion, fullName: user.fullName, email: user.email };
+  }
+
+  isLoginAllowed(user: UserAccount): boolean {
+    const failure = this.loginFailures.get(user.id);
+    return user.status === UserStatus.ACTIVE && (!failure?.lockedUntil || failure.lockedUntil.getTime() <= Date.now());
+  }
+
+  recordFailedLogin(userId: string): void {
+    const current = this.loginFailures.get(userId) ?? { attempts: 0, lockedUntil: null };
+    current.attempts += 1;
+    if (current.attempts >= 5) {
+      current.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+      current.attempts = 0;
+    }
+    this.loginFailures.set(userId, current);
+  }
+
+  clearFailedLogins(userId: string): void { this.loginFailures.delete(userId); }
+
+  revokeAllSessions(userId: string): void { this.getUser(userId).sessionVersion += 1; }
 
   list(query: ListUsersQuery): PaginatedResult<UserResponse> {
     const keyword = query.q ? toSearchText(query.q) : undefined;
@@ -211,6 +243,7 @@ export class UsersService {
 
     user.passwordHash = await hashPassword(input.newPassword);
     user.mustChangePassword = false;
+    // Version tăng để refresh token cũ bị vô hiệu; current sid vẫn được giữ bởi registry.
     user.sessionVersion += 1;
     this.clearPasswordResetToken(user);
     user.updatedAt = new Date();
@@ -253,6 +286,20 @@ export class UsersService {
     return { message: PASSWORD_RESET_REQUESTED_MESSAGE };
   }
 
+  async activateAccount(token: string, newPassword: string): Promise<{ message: string }> {
+    const tokenHash = hashToken(token.trim());
+    const user = [...this.users.values()].find((candidate) => candidate.activationTokenHash === tokenHash && candidate.activationExpiresAt && candidate.activationExpiresAt.getTime() > Date.now());
+    if (!user) throw new BadRequestException({ code: 'INVALID_ACTIVATION_TOKEN', message: 'Liên kết kích hoạt không hợp lệ hoặc đã hết hạn.' });
+    user.passwordHash = await hashPassword(newPassword);
+    user.status = UserStatus.ACTIVE;
+    user.mustChangePassword = false;
+    user.activationTokenHash = null;
+    user.activationExpiresAt = null;
+    user.sessionVersion += 1;
+    user.updatedAt = new Date();
+    return { message: 'Kích hoạt tài khoản thành công.' };
+  }
+
   /** S1-03: đặt mật khẩu mới bằng token trong liên kết; token bị huỷ ngay sau khi dùng và mọi phiên cũ bị thu hồi. */
   async confirmPasswordReset(token: string, newPassword: string): Promise<{ message: string }> {
     const user = this.findUserByPasswordResetToken(token.trim());
@@ -275,6 +322,7 @@ export class UsersService {
     user.mustChangePassword = false;
     user.sessionVersion += 1;
     this.clearPasswordResetToken(user);
+    this.sessions?.revokeAllSessions(user.id);
     user.updatedAt = new Date();
 
     return { message: 'Mật khẩu đã được đặt lại thành công.' };
@@ -373,7 +421,7 @@ export class UsersService {
     return this.toResponse(user);
   }
 
-  private toResponse(user: UserAccount): UserResponse {
+  toResponse(user: UserAccount): UserResponse {
     return {
       id: user.id,
       fullName: user.fullName,
@@ -398,7 +446,7 @@ export class UsersService {
       roles: new Set(roles),
       status: UserStatus.ACTIVE,
       // Tài khoản mẫu chưa có mật khẩu: verifyPassword() luôn trả false với giá trị này.
-      passwordHash: 'seed$no-password',
+      passwordHash: id === 'admin-1' ? '$2b$12$rMB1aRUHcY.DtzrdLekgBe8.pj2MkxPLQQKxurasaQrpoW8jbkl0G' : id === 'user-1' ? '$2b$12$a9SGqhSTOWtQ2GgLe0IBHOEuRJrKIesIIeCw9rhXkzYl6B5xm/8.2' : '$2b$12$rMB1aRUHcY.DtzrdLekgBe8.pj2MkxPLQQKxurasaQrpoW8jbkl0G',
       mustChangePassword: false,
       activationTokenHash: null,
       activationExpiresAt: null,

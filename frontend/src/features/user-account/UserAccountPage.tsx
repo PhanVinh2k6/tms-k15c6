@@ -17,7 +17,7 @@ import {
   WifiOff,
   X,
 } from 'lucide-react'
-import { ApiError, createUser, deleteUser, getCurrentUserId, updateUser } from '../account-lock/api'
+import { ApiError, createUser, deleteUser, getCurrentUserId, getSession, logout, updateUser } from '../account-lock/api'
 import { formatDateTime } from '../account-lock/format'
 import { ROLE_LABEL, STATUS_LABEL } from '../account-lock/types'
 import type { UserAccount, UserStatus } from '../account-lock/types'
@@ -155,6 +155,7 @@ function RowAction({ account, isSelf, onEdit, onLock, onUnlock, onDelete }: RowA
 }
 
 export function UserAccountPage() {
+  const session = getSession()
   const currentUserId = getCurrentUserId()
 
   // Tìm kiếm, lọc, phân trang: hook useUserSearch (src/features/user-management).
@@ -237,6 +238,10 @@ export function UserAccountPage() {
   const lastShown = data ? firstShown + items.length - 1 : 0
   const tableData = !loadError && data !== null && items.length > 0 ? data : null
 
+  if (!session || !session.roles?.includes('ADMIN')) {
+    return <main className="acl-state" role="alert"><Shield size={30} aria-hidden="true" /><h1>{session ? 'Không có quyền truy cập' : 'Phiên đăng nhập đã hết hạn'}</h1><p>{session ? 'Chỉ Quản trị hệ thống mới được quản lý tài khoản.' : 'Vui lòng đăng nhập lại để tiếp tục.'}</p><button type="button" className="acl-button acl-button-primary" onClick={async () => { await logout(); window.location.assign('/') }}>Đăng nhập lại</button></main>
+  }
+
   return (
     <div className="acl-page">
       <aside className="acl-sidebar">
@@ -258,6 +263,8 @@ export function UserAccountPage() {
             Quay lại
           </button>
         </nav>
+        <div className="acl-sidebar-user"><strong>{session.email ?? 'Tài khoản'}</strong><span>Vai trò: {session.roles?.join(', ')}</span></div>
+        <button type="button" className="acl-nav-back" onClick={async () => { await logout(); window.location.assign('/') }}>Đăng xuất</button>
         <p className="acl-sidebar-foot">Nền tảng vận hành đào tạo TMS</p>
       </aside>
 

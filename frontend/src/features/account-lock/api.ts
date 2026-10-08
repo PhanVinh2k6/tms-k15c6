@@ -13,8 +13,21 @@ import type {
 const API_URL = String(import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 
 /** JWT session is preferred; dev headers remain only for local UI work before login. */
+export type SessionClaims = { sub: string; email?: string; roles?: string[]; exp?: number; sessionVersion?: number }
+
+export function getSession(): SessionClaims | null {
+  const token = window.localStorage.getItem('tms.accessToken')
+  if (!token) return null
+  try {
+    const payload = token.split('.')[1]
+    const claims = JSON.parse(window.atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as SessionClaims
+    if (claims.exp && claims.exp * 1000 <= Date.now()) return null
+    return claims
+  } catch { return null }
+}
+
 export function getCurrentUserId(): string {
-  return String(import.meta.env.VITE_DEV_USER_ID ?? 'admin-1')
+  return getSession()?.sub ?? String(import.meta.env.VITE_DEV_USER_ID ?? 'admin-1')
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -51,7 +64,7 @@ function readMessage(value: unknown, fallback: string): string {
   return fallback
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, allowRefresh = true): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_URL}${path}`, {
@@ -75,6 +88,20 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && allowRefresh && !path.includes('/auth/login') && !path.includes('/auth/refresh')) {
+      const refreshToken = window.sessionStorage.getItem('tms.refreshToken')
+      if (refreshToken) {
+        const renewed = await fetch(`${API_URL}/v1/auth/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) })
+        if (renewed.ok) {
+          const renewedBody = await renewed.json() as LoginResult
+          window.localStorage.setItem('tms.accessToken', renewedBody.data.accessToken)
+          window.sessionStorage.setItem('tms.refreshToken', renewedBody.data.refreshToken)
+          return request<T>(path, init, false)
+        }
+      }
+      window.localStorage.removeItem('tms.accessToken')
+      window.sessionStorage.removeItem('tms.refreshToken')
+    }
     const data = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
     const errors = data.errors && typeof data.errors === 'object' ? (data.errors as Record<string, string>) : {}
     throw new ApiError(
@@ -136,4 +163,15 @@ export function login(email: string, password: string, remember: boolean): Promi
     method: 'POST',
     body: JSON.stringify({ email, password, remember }),
   })
+}
+
+export async function logout(): Promise<void> {
+  const token = window.localStorage.getItem('tms.accessToken')
+  if (token) await request('/v1/auth/logout', { method: 'POST' }, false).catch(() => undefined)
+  window.localStorage.removeItem('tms.accessToken')
+  window.sessionStorage.removeItem('tms.refreshToken')
+}
+
+export function activateAccount(token: string, newPassword: string): Promise<{ message: string }> {
+  return request<{ message: string }>('/auth/activate', { method: 'POST', body: JSON.stringify({ token, newPassword }) })
 }

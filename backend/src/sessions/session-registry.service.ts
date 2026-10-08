@@ -42,6 +42,19 @@ export class SessionRegistry {
     this.activeSessionsByUser.set(userId, active);
   }
 
+  isRevoked(userId: string, sessionId: string): boolean {
+    return this.revokedSessionsByUser.get(userId)?.has(sessionId) ?? false;
+  }
+
+  revokeAllSessions(userId: string): number {
+    const active = this.activeSessionsByUser.get(userId) ?? new Set<string>();
+    const revoked = this.revokedSessionsByUser.get(userId) ?? new Set<string>();
+    for (const sessionId of active) revoked.add(sessionId);
+    this.activeSessionsByUser.set(userId, new Set());
+    this.revokedSessionsByUser.set(userId, revoked);
+    return active.size;
+  }
+
   revokeSession(userId: string, sessionId: string): void {
     const active = this.activeSessionsByUser.get(userId);
     active?.delete(sessionId);
