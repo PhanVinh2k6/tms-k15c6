@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { AuthUsersModule } from './auth-users/auth-users.module';
 import { User as AuthUser } from './auth-users/user.entity';
+import { CoursesModule } from './courses/courses.module';
 import { RolesModule } from './roles/roles.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { UsersModule } from './users/users.module';
@@ -33,6 +34,7 @@ const persistenceImports = enablePersistence
     SessionsModule,
     RolesModule,
     UsersModule,
+    CoursesModule,
   ],
 })
 export class AppModule {}
