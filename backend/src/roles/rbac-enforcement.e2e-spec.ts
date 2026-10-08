@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../app.module';
+import { ProgramsController } from '../programs/programs.controller';
 import { AccountSecurityController } from '../users/account-security.controller';
 import { PasswordResetController } from '../users/password-reset.controller';
 import { UsersController } from '../users/users.controller';
@@ -16,7 +17,7 @@ const as = (id: string, roles: string) => ({ 'x-user-id': id, 'x-user-roles': ro
  * Controller nào nằm trong danh sách này BẮT BUỘC có @UseGuards(PermissionGuard) và
  * @RequirePermission trên từng route. Thêm route mới mà quên phân quyền → test đỏ.
  */
-const GUARDED_CONTROLLERS = [UsersController, RolesController];
+const GUARDED_CONTROLLERS = [UsersController, RolesController, ProgramsController];
 
 /** Route cố ý không cần quyền theo vai trò: chỉ cần đăng nhập (tự đổi mật khẩu) hoặc công khai (quên mật khẩu). */
 const SELF_SERVICE_OR_PUBLIC_CONTROLLERS = [AccountSecurityController, PasswordResetController];
