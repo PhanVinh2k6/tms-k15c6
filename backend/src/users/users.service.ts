@@ -87,7 +87,7 @@ export class UsersService {
         to: user.email,
         fullName: user.fullName,
         temporaryPassword,
-        activationLink: `${frontendUrl}/activate?token=${token}`,
+        activationLink: `${frontendUrl}/activate#token=${encodeURIComponent(token)}`,
         expiresAt,
       });
     } catch {
@@ -303,7 +303,7 @@ export class UsersService {
    */
   async activateAccount(token: string, newPassword: string): Promise<{ message: string }> {
     const tokenHash = hashToken(token.trim());
-    const user = [...this.users.values()].find((candidate) => candidate.activationTokenHash === tokenHash && candidate.activationExpiresAt && candidate.activationExpiresAt.getTime() > Date.now());
+    const user = [...this.users.values()].find((candidate) => candidate.status === UserStatus.PENDING_ACTIVATION && candidate.activationTokenHash === tokenHash && candidate.activationExpiresAt && candidate.activationExpiresAt.getTime() > Date.now());
     if (!user) throw new BadRequestException({ code: 'INVALID_ACTIVATION_TOKEN', message: 'Liên kết kích hoạt không hợp lệ hoặc đã hết hạn.' });
     user.passwordHash = await hashPassword(newPassword);
     user.status = UserStatus.ACTIVE;

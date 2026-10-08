@@ -35,11 +35,38 @@ export function getCurrentUserId(): string {
   return getSession()?.sub ?? String(import.meta.env.VITE_DEV_USER_ID ?? 'admin-1')
 }
 
-/** Build Bearer headers from a stored access token, or use demo identity headers when absent. */
+/** Build Bearer headers from a stored access token, or development-only demo headers when absent. */
 function getAuthHeaders(): Record<string, string> {
   const accessToken = window.localStorage.getItem('tms.accessToken')
   if (accessToken) return { Authorization: `Bearer ${accessToken}` }
+  if (!import.meta.env.DEV) return {}
   return { 'x-user-id': getCurrentUserId(), 'x-user-roles': String(import.meta.env.VITE_DEV_USER_ROLES ?? 'ADMIN') }
+}
+
+let refreshPromise: Promise<boolean> | null = null
+
+/** Refresh the access token once even when several requests receive 401 concurrently. */
+export function refreshSession(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise
+  const refreshToken = window.sessionStorage.getItem('tms.refreshToken')
+  if (!refreshToken) return Promise.resolve(false)
+
+  refreshPromise = fetch(`${API_URL}/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  })
+    .then(async (response) => {
+      if (!response.ok) return false
+      const renewedBody = await response.json() as LoginResult
+      window.localStorage.setItem('tms.accessToken', renewedBody.data.accessToken)
+      window.sessionStorage.setItem('tms.refreshToken', renewedBody.data.refreshToken)
+      return true
+    })
+    .catch(() => false)
+    .finally(() => { refreshPromise = null })
+
+  return refreshPromise
 }
 
 /** Lỗi từ backend (hoặc mất mạng). `code` khớp mã lỗi backend: ALREADY_LOCKED, NOT_LOCKED, ... */
@@ -100,16 +127,7 @@ async function request<T>(path: string, init: RequestInit = {}, allowRefresh = t
 
   if (!response.ok) {
     if (response.status === 401 && allowRefresh && !path.includes('/auth/login') && !path.includes('/auth/refresh')) {
-      const refreshToken = window.sessionStorage.getItem('tms.refreshToken')
-      if (refreshToken) {
-        const renewed = await fetch(`${API_URL}/v1/auth/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) })
-        if (renewed.ok) {
-          const renewedBody = await renewed.json() as LoginResult
-          window.localStorage.setItem('tms.accessToken', renewedBody.data.accessToken)
-          window.sessionStorage.setItem('tms.refreshToken', renewedBody.data.refreshToken)
-          return request<T>(path, init, false)
-        }
-      }
+      if (await refreshSession()) return request<T>(path, init, false)
       window.localStorage.removeItem('tms.accessToken')
       window.sessionStorage.removeItem('tms.refreshToken')
     }

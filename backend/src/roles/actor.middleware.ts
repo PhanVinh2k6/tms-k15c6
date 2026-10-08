@@ -6,6 +6,7 @@ import { SessionRegistry } from '../sessions/session-registry.service';
 import { Actor, Role } from './role.types';
 import { UsersService } from '../users/users.service';
 import { UserStatus } from '../users/user.types';
+import { jwtSecret } from '../auth/jwt-secret.util';
 declare module 'express-serve-static-core' { interface Request { actor?: Actor } }
 type AccessPayload = { sub: string; email: string; roles?: Role[]; sid?: string; sessionVersion?: number };
 @Injectable()
@@ -35,13 +36,13 @@ export class ActorMiddleware implements NestMiddleware {
     if (!token) throw this.unauthorized();
     try {
       const payload = await this.jwt.verifyAsync<AccessPayload>(token, {
-        secret: this.config.get<string>('JWT_ACCESS_SECRET') ?? 'dev-only-access-secret-change-me-32-chars',
+        secret: jwtSecret(this.config, 'JWT_ACCESS_SECRET'),
       });
       if (!payload.sub || !payload.sid || !Array.isArray(payload.roles)) throw this.unauthorized();
       const state = this.users?.getAuthState(payload.sub);
-      if (state && (state.status !== UserStatus.ACTIVE || this.sessions.isRevoked(payload.sub, payload.sid))) throw this.unauthorized();
+      if (state && state.status !== UserStatus.ACTIVE) throw this.unauthorized();
       const roles = new Set(((state?.roles ?? payload.roles) as Role[]).filter((role: Role) => Object.values(Role).includes(role)));
-      this.sessions.registerSession(payload.sub, payload.sid);
+      if (state) this.sessions.assertActiveSession(payload.sub, payload.sid);
       req.actor = { id: payload.sub, roles, sessionId: payload.sid };
       next();
     } catch (error) {

@@ -3,7 +3,11 @@ import { activateAccount } from '../account-lock/api'
 
 /** Render the activation form using the URL token, with submission and completion feedback. */
 export default function Activation() {
-  const token = new URLSearchParams(window.location.search).get('token') ?? ''
+  const [token] = useState(() => {
+    const value = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token') ?? ''
+    if (window.location.hash) window.history.replaceState(null, document.title, `${window.location.pathname}${window.location.search}`)
+    return value
+  })
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')

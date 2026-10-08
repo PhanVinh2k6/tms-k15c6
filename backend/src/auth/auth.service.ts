@@ -10,6 +10,7 @@ import { Role } from '../roles/role.types';
 import { SessionRegistry } from '../sessions/session-registry.service';
 import { UsersService } from '../users/users.service';
 import { UserAccount, UserStatus } from '../users/user.types';
+import { jwtSecret } from './jwt-secret.util';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,11 @@ export class AuthService {
     private readonly config: ConfigService,
     @Optional() private readonly sessions?: SessionRegistry,
     @Optional() private readonly managedUsers?: UsersService,
-  ) {}
+  ) {
+    // Fail during provider construction rather than accepting forgeable defaults in production.
+    this.accessSecret();
+    this.refreshSecret();
+  }
 
   /** Create a legacy account and return its access token, refresh token, and public profile. */
   async register(dto: RegisterDto) { return this.issueTokens(await this.authUsers.create(dto)); }
@@ -100,7 +105,7 @@ export class AuthService {
   /** Map legacy demo identities to roles; other legacy accounts receive no roles. */
   private legacyRoles(user: User): Role[] { return user.id === 'admin-1' || user.email === 'admin@tms.local' ? [Role.ADMIN] : user.id === 'user-1' ? [Role.INSTRUCTOR] : []; }
   /** Read the access-token signing secret, falling back to the development default. */
-  private accessSecret(): string { return this.config.get<string>('JWT_ACCESS_SECRET') ?? 'dev-only-access-secret-change-me-32-chars'; }
+  private accessSecret(): string { return jwtSecret(this.config, 'JWT_ACCESS_SECRET'); }
   /** Read the refresh-token signing secret, falling back to the development default. */
-  private refreshSecret(): string { return this.config.get<string>('JWT_REFRESH_SECRET') ?? 'dev-only-refresh-secret-change-me-32-chars'; }
+  private refreshSecret(): string { return jwtSecret(this.config, 'JWT_REFRESH_SECRET'); }
 }

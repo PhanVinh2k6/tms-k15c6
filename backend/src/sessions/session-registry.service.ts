@@ -47,6 +47,17 @@ export class SessionRegistry {
     return this.revokedSessionsByUser.get(userId)?.has(sessionId) ?? false;
   }
 
+  /** Reject unknown or revoked sessions without adding attacker-controlled IDs to the registry. */
+  assertActiveSession(userId: string, sessionId: string): void {
+    if (this.isRevoked(userId, sessionId) || !this.activeSessionsByUser.get(userId)?.has(sessionId)) {
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'SESSION_INVALID',
+        message: 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
+      });
+    }
+  }
+
   /** Revoke all currently registered sessions for the user and return their count. */
   revokeAllSessions(userId: string): number {
     const active = this.activeSessionsByUser.get(userId) ?? new Set<string>();
