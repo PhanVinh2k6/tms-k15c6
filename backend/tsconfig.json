@@ -8,12 +8,15 @@
     "allowSyntheticDefaultImports": true,
     "target": "ES2022",
     "sourceMap": true,
+    "rootDir": "./src",
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
     "strictPropertyInitialization": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "types": ["node", "jest","multer"],
+    "baseUrl": "./",
+    "ignoreDeprecations": "6.0"
   }
 }
