@@ -1,7 +1,7 @@
-# Demo Sprint 1 — TMS
+# Demo Sprint 1–2 — TMS
 
 ## Mục tiêu
-Một demo web end-to-end cho các luồng Sprint 1: đăng nhập, phân quyền, dashboard theo vai trò, duy trì phiên/đăng xuất, quản lý tài khoản, gán/thu hồi vai trò và khóa/mở khóa.
+Một demo web end-to-end cho các luồng Sprint 1–2: đăng nhập, phân quyền, dashboard theo vai trò, duy trì phiên/đăng xuất, quản lý tài khoản, gán/thu hồi vai trò, khóa/mở khóa, hồ sơ cá nhân, danh mục chương trình/môn học/buổi học và đầu phễu tuyển sinh.
 
 ## Design Read
 - Artifact: internal SaaS dashboard.
@@ -20,6 +20,7 @@ Một demo web end-to-end cho các luồng Sprint 1: đăng nhập, phân quyề
 
 ## Cấu trúc
 - `frontend/src/features/dashboard/`: dashboard theo role và dữ liệu demo.
+- `frontend/src/features/workspace/`: các module demo Sprint 2 và shell workspace dùng chung.
 - `frontend/dashboard.html`: entry point dashboard.
 - `frontend/src/features/account-lock/api.ts`: auth/session/role API client.
 - `frontend/src/App.tsx`: login redirect theo role.
@@ -30,3 +31,5 @@ Một demo web end-to-end cho các luồng Sprint 1: đăng nhập, phân quyề
 - S1-01: login redirect theo role, demo user dashboard, thông báo lockout đã có từ backend.
 - S1-02: session status, refresh-on-load, logout rõ ràng và session-expired state.
 - S1-09: API assign/revoke role và modal quản lý role trực tiếp trên danh sách user.
+- S2-01–S2-07: giao diện hồ sơ, chương trình, môn học và buổi học ở chế độ demo local.
+- S2-08–S2-11: giao diện lead công khai, danh sách lead, phân công và bộ lọc ở chế độ demo local.

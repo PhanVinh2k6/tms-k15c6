@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity, ArrowUpRight, Bell, BookOpenCheck, CalendarDays, CheckCircle2,
-  ChevronRight, Clock3, LayoutDashboard, LogOut, Menu,
+  ChevronRight, Clock3, LayoutDashboard, LogOut, Mail, Menu,
   Shield, ShieldCheck, UsersRound, X,
 } from 'lucide-react'
 import { getSession, logout, refreshSession, type SessionClaims } from '../account-lock/api'
 import { ROLE_LABEL, type Role } from '../account-lock/types'
+import { WorkspaceModule, type ModuleKey } from '../workspace/WorkspaceModules'
 import './dashboard.css'
 
 type DashboardProps = { previewRole?: Role }
@@ -53,6 +54,7 @@ export function Dashboard({ previewRole }: DashboardProps) {
   const [checking, setChecking] = useState(() => !getSession() && Boolean(sessionStorage.getItem('tms.refreshToken')))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [activeModule, setActiveModule] = useState<'overview' | ModuleKey>('overview')
   const role = roleFromSession(session, previewRole)
   const view = roleViews[role]
   const displayName = session?.email?.split('@')[0] ?? (role === 'INSTRUCTOR' ? 'Giảng viên mẫu' : 'Tài khoản demo')
@@ -68,6 +70,8 @@ export function Dashboard({ previewRole }: DashboardProps) {
 
   const handleLogout = async () => { await logout(); window.location.assign('/') }
   const handleAction = () => setNotice('Tính năng nghiệp vụ sẽ được nối vào module sprint tiếp theo. Luồng quyền và session đã sẵn sàng.')
+  const openModule = (module: 'overview' | ModuleKey) => { setActiveModule(module); setSidebarOpen(false) }
+  const moduleLabel = activeModule === 'overview' ? 'Tổng quan' : ({ profile: 'Hồ sơ cá nhân', programs: 'Chương trình đào tạo', subjects: 'Danh mục môn học', sessions: 'Buổi học & mục tiêu', leads: 'Lead tuyển sinh', inbox: 'Đăng ký tư vấn' } as Record<ModuleKey, string>)[activeModule]
 
   return (
     <div className="dash-shell">
@@ -75,22 +79,29 @@ export function Dashboard({ previewRole }: DashboardProps) {
         <div className="dash-brand"><span className="dash-mark"><i /><i /><i /></span><strong>TMS.</strong><button className="dash-close" onClick={() => setSidebarOpen(false)} aria-label="Đóng menu"><X size={18} /></button></div>
         <div className="dash-profile"><div className="dash-avatar">{displayName.slice(0, 1).toUpperCase()}</div><div><strong>{displayName}</strong><span>{ROLE_LABEL[role]}</span></div></div>
         <nav className="dash-nav" aria-label="Điều hướng chính">
-          <span className="dash-nav-active"><LayoutDashboard size={18} /> Tổng quan</span>
+          <button className={activeModule === 'overview' ? 'dash-nav-active' : undefined} onClick={() => openModule('overview')}><LayoutDashboard size={18} /> Tổng quan</button>
+          <button className={activeModule === 'profile' ? 'dash-nav-active' : undefined} onClick={() => openModule('profile')}><Shield size={18} /> Hồ sơ cá nhân</button>
+          <button className={activeModule === 'programs' ? 'dash-nav-active' : undefined} onClick={() => openModule('programs')}><BookOpenCheck size={18} /> Chương trình đào tạo</button>
+          <button className={activeModule === 'subjects' ? 'dash-nav-active' : undefined} onClick={() => openModule('subjects')}><BookOpenCheck size={18} /> Môn học & lộ trình</button>
+          <button className={activeModule === 'sessions' ? 'dash-nav-active' : undefined} onClick={() => openModule('sessions')}><CalendarDays size={18} /> Buổi học & mục tiêu</button>
+          {(role === 'ADMIN' || role === 'TRAINING_MANAGER' || role === 'ADMISSIONS') && <button className={activeModule === 'leads' ? 'dash-nav-active' : undefined} onClick={() => openModule('leads')}><UsersRound size={18} /> Lead tuyển sinh</button>}
+          {(role === 'GUEST' || role === 'STUDENT') && <button className={activeModule === 'inbox' ? 'dash-nav-active' : undefined} onClick={() => openModule('inbox')}><Mail size={18} /> Đăng ký tư vấn</button>}
           {role === 'ADMIN' && <><a href="/admin-users.html"><UsersRound size={18} /> Quản lý tài khoản</a><a href="/admin-account-lock.html"><Shield size={18} /> Khóa / mở khóa</a></>}
-          {role !== 'ADMIN' && <button onClick={handleAction}><BookOpenCheck size={18} /> Công việc của tôi</button>}
-          <button onClick={handleAction}><CalendarDays size={18} /> Lịch & hoạt động</button>
         </nav>
         <div className="dash-sidebar-foot"><div className="dash-health"><span /> Hệ thống hoạt động bình thường</div><button className="dash-logout" onClick={handleLogout}><LogOut size={17} /> Đăng xuất</button></div>
       </aside>
       {sidebarOpen && <button className="dash-backdrop" onClick={() => setSidebarOpen(false)} aria-label="Đóng menu" />}
       <main className="dash-main">
-        <header className="dash-topbar"><button className="dash-menu" onClick={() => setSidebarOpen(true)} aria-label="Mở menu"><Menu size={21} /></button><div className="dash-breadcrumb"><span>TMS Workspace</span><ChevronRight size={14} /><strong>Tổng quan</strong></div><div className="dash-top-actions"><span className="dash-session"><span /> {sessionLabel}</span><button className="dash-icon-btn" onClick={() => setNotice('Bạn không có thông báo mới.')} aria-label="Thông báo"><Bell size={18} /></button><button className="dash-top-logout" onClick={handleLogout}>Thoát <LogOut size={15} /></button></div></header>
+        <header className="dash-topbar"><button className="dash-menu" onClick={() => setSidebarOpen(true)} aria-label="Mở menu"><Menu size={21} /></button><div className="dash-breadcrumb"><span>TMS Workspace</span><ChevronRight size={14} /><strong>{moduleLabel}</strong></div><div className="dash-top-actions"><span className="dash-session"><span /> {sessionLabel}</span><button className="dash-icon-btn" onClick={() => setNotice('Bạn không có thông báo mới.')} aria-label="Thông báo"><Bell size={18} /></button><button className="dash-top-logout" onClick={handleLogout}>Thoát <LogOut size={15} /></button></div></header>
         <section className="dash-content">
+          {activeModule !== 'overview' && <WorkspaceModule module={activeModule} role={role} onNotice={setNotice} />}
+          {activeModule === 'overview' && <>
           <div className="dash-hero"><div><p className="dash-eyebrow"><Activity size={14} /> {view.eyebrow}</p><h1>{view.title}</h1><p>{view.subtitle}</p></div><button className="dash-primary" onClick={handleAction}>{view.primary}<ArrowUpRight size={17} /></button></div>
           {notice && <div className="dash-notice"><CheckCircle2 size={18} /><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Đóng thông báo"><X size={16} /></button></div>}
           <div className="dash-stats">{view.stats.map((stat) => <article className={`dash-stat dash-stat-${stat.tone}`} key={stat.label}><div className="dash-stat-icon"><ShieldCheck size={18} /></div><span>{stat.label}</span><strong>{stat.value}</strong><small>{stat.detail}</small></article>)}</div>
           <div className="dash-grid"><section className="dash-panel dash-tasks"><div className="dash-panel-head"><div><p className="dash-eyebrow">TODAY</p><h2>Việc cần tập trung</h2></div><button onClick={handleAction}>Xem tất cả <ArrowUpRight size={15} /></button></div><div className="dash-task-list">{view.tasks.map((task) => <button className="dash-task" key={task.title} onClick={handleAction}><span className="dash-task-dot" /><span className="dash-task-copy"><strong>{task.title}</strong><small>{task.meta}</small></span><em>{task.status}</em><ChevronRight size={16} /></button>)}</div></section><section className="dash-panel dash-activity"><div className="dash-panel-head"><div><p className="dash-eyebrow">ACTIVITY</p><h2>Hoạt động gần đây</h2></div><Activity size={18} /></div><div className="dash-timeline"><div><span className="timeline-icon timeline-purple"><ShieldCheck size={15} /></span><p><strong>Phiên đăng nhập an toàn</strong><small>Vừa xong · Từ thiết bị hiện tại</small></p></div><div><span className="timeline-icon timeline-teal"><UsersRound size={15} /></span><p><strong>Vai trò {ROLE_LABEL[role]} được xác nhận</strong><small>5 phút trước · Server đã kiểm quyền</small></p></div><div><span className="timeline-icon timeline-yellow"><Bell size={15} /></span><p><strong>Không có cảnh báo mới</strong><small>Hệ thống đã đồng bộ dữ liệu</small></p></div></div></section></div>
           <div className="dash-footer-note"><ShieldCheck size={16} /> Mọi thao tác nhạy cảm đều được kiểm quyền ở server · Sprint 1 demo <span>v1.0</span></div>
+          </>}
         </section>
       </main>
     </div>
