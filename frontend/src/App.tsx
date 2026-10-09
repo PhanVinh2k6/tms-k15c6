@@ -99,7 +99,8 @@ export default function App() {
       window.localStorage.setItem('tms.accessToken', result.data.accessToken)
       window.sessionStorage.setItem('tms.refreshToken', result.data.refreshToken)
       setSubmitted(true)
-      window.location.assign('/admin-users.html')
+      const roles = result.data.user.roles ?? []
+      window.location.assign(roles.includes('ADMIN') ? '/admin-users.html' : '/dashboard.html')
     } catch (error) {
       setSubmitted(false)
       setServerError(error instanceof ApiError ? 'Email hoặc mật khẩu không đúng.' : 'Không kết nối được máy chủ. Vui lòng thử lại.')

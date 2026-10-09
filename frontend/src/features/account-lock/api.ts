@@ -174,6 +174,18 @@ export function updateUser(id: string, payload: UpdateUserPayload): Promise<User
   return request<UserAccount>(`/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload) })
 }
 
+export function listUserRoles(id: string): Promise<{ userId: string; roles: UserAccount['roles'] }> {
+  return request<{ userId: string; roles: UserAccount['roles'] }>(`/users/${encodeURIComponent(id)}/roles`)
+}
+
+export function assignUserRole(id: string, role: UserAccount['roles'][number]): Promise<{ userId: string; roles: UserAccount['roles'] }> {
+  return request<{ userId: string; roles: UserAccount['roles'] }>(`/users/${encodeURIComponent(id)}/roles/${role}`, { method: 'POST' })
+}
+
+export function revokeUserRole(id: string, role: UserAccount['roles'][number]): Promise<{ userId: string; roles: UserAccount['roles'] }> {
+  return request<{ userId: string; roles: UserAccount['roles'] }>(`/users/${encodeURIComponent(id)}/roles/${role}`, { method: 'DELETE' })
+}
+
 /** Xóa hẳn tài khoản (không khôi phục được). Cần backend có DELETE /users/:id. */
 export function deleteUser(id: string): Promise<DeleteResult> {
   return request<DeleteResult>(`/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
@@ -183,7 +195,7 @@ export type LoginResult = {
   data: {
     accessToken: string
     refreshToken: string
-    user: { id: string; email: string; fullName: string }
+    user: { id: string; email: string; fullName: string; roles?: string[] }
   }
 }
 

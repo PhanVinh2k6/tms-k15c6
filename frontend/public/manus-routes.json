@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"Đăng nhập TMS"},{"path":"/dashboard.html","title":"Dashboard TMS"},{"path":"/admin-users.html","title":"Quản lý tài khoản"},{"path":"/admin-account-lock.html","title":"Khóa và mở khóa tài khoản"},{"path":"/password-reset.html","title":"Đặt lại mật khẩu"},{"path":"/activate.html","title":"Kích hoạt tài khoản"}]}

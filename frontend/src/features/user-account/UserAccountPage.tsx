@@ -7,9 +7,11 @@ import {
   Lock,
   LockKeyhole,
   LockOpen,
+  LoaderCircle,
   Plus,
   RefreshCw,
   Shield,
+  ShieldPlus,
   SquarePen,
   Trash2,
   UserX,
@@ -17,10 +19,9 @@ import {
   WifiOff,
   X,
 } from 'lucide-react'
-import { ApiError, createUser, deleteUser, getCurrentUserId, getSession, logout, refreshSession, updateUser, type SessionClaims } from '../account-lock/api'
+import { ApiError, assignUserRole, createUser, deleteUser, getCurrentUserId, getSession, listUserRoles, logout, refreshSession, revokeUserRole, updateUser, type SessionClaims } from '../account-lock/api'
 import { formatDateTime } from '../account-lock/format'
-import { ROLE_LABEL, STATUS_LABEL } from '../account-lock/types'
-import type { UserAccount, UserStatus } from '../account-lock/types'
+import { ROLE_LABEL, ROLE_ORDER, STATUS_LABEL, type Role, type UserAccount, type UserStatus } from '../account-lock/types'
 import {
   DeleteUserDialog,
   HandoverAlert,
@@ -36,6 +37,7 @@ import {
 } from '../user-management'
 import type { FormValues, Notice } from '../user-management'
 import './user-account.css'
+import './role-dialog.css'
 
 const PAGE_SIZE = 10
 
@@ -93,6 +95,28 @@ function LockedInfo({ account }: { account: UserAccount }) {
   )
 }
 
+function RoleDialog({ account, onClose, onSaved }: { account: UserAccount; onClose: () => void; onSaved: (roles: Role[]) => void }) {
+  const [roles, setRoles] = useState<Role[]>(account.roles)
+  const [busy, setBusy] = useState<Role | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => { listUserRoles(account.id).then((result) => setRoles(result.roles)).catch(() => setError('Không tải được vai trò hiện tại.')) }, [account.id])
+  const toggle = async (role: Role) => {
+    setBusy(role); setError('')
+    try { const result = roles.includes(role) ? await revokeUserRole(account.id, role) : await assignUserRole(account.id, role); setRoles(result.roles); onSaved(result.roles) }
+    catch (caught) { setError(caught instanceof Error ? caught.message : 'Không cập nhật được vai trò.') }
+    finally { setBusy(null) }
+  }
+  return <div className="acl-role-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose() }}>
+    <section className="acl-role-dialog" role="dialog" aria-modal="true" aria-labelledby="role-dialog-title">
+      <div className="acl-role-head"><div><p className="acl-role-kicker">S1-09 · ROLE MANAGEMENT</p><h2 id="role-dialog-title">Quản lý vai trò</h2><p>{account.fullName} · {account.email}</p></div><button className="acl-icon-button" onClick={onClose} aria-label="Đóng"><X size={18} /></button></div>
+      <p className="acl-role-help">Thay đổi có hiệu lực ngay ở thao tác kế tiếp. Quyền vẫn được kiểm tra lại ở server.</p>
+      <div className="acl-role-list">{ROLE_ORDER.map((role) => { const selected = roles.includes(role); return <button key={role} className={`acl-role-option${selected ? ' is-selected' : ''}`} disabled={busy !== null || (account.id === getCurrentUserId() && role === 'ADMIN' && selected)} onClick={() => void toggle(role)}><span className="acl-role-check">{busy === role ? <LoaderCircle size={15} className="acl-spin" /> : selected ? '✓' : ''}</span><span><strong>{ROLE_LABEL[role]}</strong><small>{role}</small></span><span className="acl-role-state">{selected ? 'Đang có' : 'Gán role'}</span></button> })}</div>
+      {error && <p className="acl-form-error" role="alert">{error}</p>}
+      <div className="acl-modal-actions"><button type="button" className="acl-button acl-button-primary" onClick={onClose}>Hoàn tất</button></div>
+    </section>
+  </div>
+}
+
 type RowActionProps = {
   account: UserAccount
   isSelf: boolean
@@ -100,9 +124,10 @@ type RowActionProps = {
   onLock: (account: UserAccount) => void
   onUnlock: (account: UserAccount) => void
   onDelete: (account: UserAccount) => void
+  onRoles: (account: UserAccount) => void
 }
 
-function RowAction({ account, isSelf, onEdit, onLock, onUnlock, onDelete }: RowActionProps) {
+function RowAction({ account, isSelf, onEdit, onLock, onUnlock, onDelete, onRoles }: RowActionProps) {
   return (
     <span className="acl-row-actions">
       {account.status === 'LOCKED' ? (
@@ -137,6 +162,9 @@ function RowAction({ account, isSelf, onEdit, onLock, onUnlock, onDelete }: RowA
       >
         <SquarePen size={17} aria-hidden="true" />
       </button>
+      <button type="button" className="acl-icon-action" aria-label={`Quản lý vai trò ${account.fullName}`} title="Phân quyền" onClick={() => onRoles(account)}>
+        <ShieldPlus size={17} aria-hidden="true" />
+      </button>
       {isSelf ? (
         <span className="acl-icon-action acl-icon-action-off" aria-hidden="true" />
       ) : (
@@ -170,6 +198,7 @@ export function UserAccountPage() {
 
   const [creating, setCreating] = useState(false)
   const [editTarget, setEditTarget] = useState<UserAccount | null>(null)
+  const [roleTarget, setRoleTarget] = useState<UserAccount | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserAccount | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   // Khoá / mở khoá (S1-10): hook useLockUnlock (src/features/user-management).
@@ -403,6 +432,7 @@ export function UserAccountPage() {
                             account={account}
                             isSelf={account.id === currentUserId}
                             onEdit={setEditTarget}
+                            onRoles={setRoleTarget}
                             onLock={lock.startLock}
                             onUnlock={lock.startUnlock}
                             onDelete={setDeleteTarget}
@@ -431,6 +461,7 @@ export function UserAccountPage() {
                             account={account}
                             isSelf={account.id === currentUserId}
                             onEdit={setEditTarget}
+                            onRoles={setRoleTarget}
                             onLock={lock.startLock}
                             onUnlock={lock.startUnlock}
                             onDelete={setDeleteTarget}
@@ -481,6 +512,7 @@ export function UserAccountPage() {
       {creating && <UserFormDialog onSubmit={confirmCreate} onClose={() => setCreating(false)} />}
       {editTarget && <UserFormDialog account={editTarget} onSubmit={confirmEdit} onClose={() => setEditTarget(null)} />}
       {deleteTarget && <DeleteUserDialog account={deleteTarget} onConfirm={confirmDelete} onClose={() => setDeleteTarget(null)} />}
+      {roleTarget && <RoleDialog account={roleTarget} onClose={() => setRoleTarget(null)} onSaved={(roles) => { setRoleTarget((current) => current ? { ...current, roles } : current); reload() }} />}
     </div>
   )
 }
