@@ -7,6 +7,7 @@ import { User as AuthUser } from './auth-users/user.entity';
 import { RolesModule } from './roles/roles.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { UsersModule } from './users/users.module';
+import { ImportsModule } from './imports/imports.module';
 
 const enableS2Persistence = process.env.NODE_ENV !== 'test' && Boolean(process.env.DATABASE_URL);
 const persistenceImports = enableS2Persistence
@@ -35,6 +36,7 @@ const persistenceImports = enableS2Persistence
     SessionsModule,
     RolesModule,
     UsersModule,
+    ImportsModule,
   ],
 })
 export class AppModule {}
