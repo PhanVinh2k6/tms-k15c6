@@ -462,9 +462,13 @@ export class UsersService {
       phone: null,
       roles: new Set(roles),
       status: UserStatus.ACTIVE,
-      // Local demo account only: user@tms.local / User@123.
-      // Keep only the scrypt hash here; never store the demo password in plaintext.
-      passwordHash: id === 'user-1' ? 'scrypt$CAuJx3GTbSaQD/+w2L9JpQ==$7aBsAAwnaE4Nxx8+b5HBPokTl5hR7I8Xp4VTgbLxPo6sSUM5rS3wOctIoqyeKXuPEqUda/01dXXi4tGKE6RgCw==' : '$2b$12$rMB1aRUHcY.DtzrdLekgBe8.pj2MkxPLQQKxurasaQrpoW8jbkl0G',
+      // Local demo accounts only: admin@tms.local / Admin@123 and user@tms.local / User@123.
+      // Keep only scrypt hashes here; never store demo passwords in plaintext.
+      passwordHash: id === 'admin-1'
+        ? 'scrypt$kuuhySPg89yJUTY43FKi7g==$PRM6kO7dnIivHfHG3rRTNaT1jDRZcuPVuKlrTnT/hmKpaYgc0N7hSW5GzFb3hDODiMmeNfFn/Bvpt+77HkGQHg=='
+        : id === 'user-1'
+          ? 'scrypt$CAuJx3GTbSaQD/+w2L9JpQ==$7aBsAAwnaE4Nxx8+b5HBPokTl5hR7I8Xp4VTgbLxPo6sSUM5rS3wOctIoqyeKXuPEqUda/01dXXi4tGKE6RgCw=='
+          : '$2b$12$rMB1aRUHcY.DtzrdLekgBe8.pj2MkxPLQQKxurasaQrpoW8jbkl0G',
       mustChangePassword: false,
       activationTokenHash: null,
       activationExpiresAt: null,
